@@ -1,6 +1,5 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
   Users, 
   MessageCircle, 
   FileText, 
@@ -14,11 +13,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Clientes', href: '/clients', icon: Users },
   { name: 'Mensajes', href: '/messages', icon: MessageCircle },
-  { name: 'Documentos', href: '/documents', icon: FileText },
-  { name: 'Notificaciones', href: '/notifications', icon: Bell },
 ];
 
 export const Sidebar = () => {
