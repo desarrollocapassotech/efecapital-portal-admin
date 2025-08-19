@@ -227,3 +227,36 @@ export const mockNotifications: Notification[] = [
     clientId: '3'
   }
 ];
+// src/data/mockData.ts
+
+// ... (tus arrays mockClients, mockMessages, etc.)
+
+/**
+ * Devuelve los datos simulados para un usuario específico
+ */
+export const getMockDataForUser = (userId: string) => {
+  // Buscar cliente por ID
+  const client = mockClients.find(c => c.id === userId);
+
+  // Filtrar datos relacionados con el cliente
+  const mensajes = mockMessages.filter(m => m.clientId === userId);
+  const archivos = mockDocuments.filter(d => d.clientId === userId);
+  const historial = mockActivities.filter(a => a.clientId === userId);
+
+  // Aquí puedes simular más datos si no los tienes en otro lado
+  return {
+    // Datos del cliente
+    nombre: client ? `${client.firstName} ${client.lastName}` : 'Cliente Desconocido',
+    tipoInversor: client?.investorProfile,
+    broker: client?.broker,
+    objetivos: client?.objectives,
+    telefono: client?.phone,
+    email: client?.email,
+
+    // Datos relacionados
+    mensajes,
+    archivos,
+    historial,
+    notificaciones: mockNotifications.filter(n => n.clientId === userId),
+  };
+};

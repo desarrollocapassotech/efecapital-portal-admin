@@ -7,7 +7,7 @@ import { Login } from "./pages/Login";
 import { Layout } from "./components/Layout";
 import { Dashboard } from "./pages/Dashboard";
 import { Clients } from "./pages/Clients";
-import { ClientDetail } from "./pages/ClientDetail";
+import ClientDetail from "./pages/ClientDetail"; 
 import { ClientForm } from "./pages/ClientForm";
 import { Messages } from "./pages/Messages";
 import { Documents } from "./pages/Documents";

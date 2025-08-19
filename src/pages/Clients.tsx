@@ -119,9 +119,7 @@ export const Clients = () => {
                     <TableHead>Contacto</TableHead>
                     <TableHead>Perfil</TableHead>
                     <TableHead>Broker</TableHead>
-                    <TableHead>Último Contacto</TableHead>
-                    <TableHead>Actividad</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -164,26 +162,7 @@ export const Clients = () => {
                         <TableCell className="text-sm">
                           {client.broker}
                         </TableCell>
-                        <TableCell className="text-sm">
-                          {format(client.lastContact, 'dd/MM/yyyy', { locale: es })}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col space-y-1">
-                            <div className="flex items-center space-x-2 text-xs">
-                              <MessageCircle className="h-3 w-3 text-muted-foreground" />
-                              <span>{stats.totalMessages} mensajes</span>
-                              {stats.pendingMessages > 0 && (
-                                <Badge variant="secondary" className="h-4 px-1 text-xs">
-                                  {stats.pendingMessages} pend.
-                                </Badge>
-                              )}
-                            </div>
-                            <div className="flex items-center space-x-2 text-xs">
-                              <FileText className="h-3 w-3 text-muted-foreground" />
-                              <span>{stats.totalDocuments} documentos</span>
-                            </div>
-                          </div>
-                        </TableCell>
+                        
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
                             <Button
