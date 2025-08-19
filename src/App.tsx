@@ -10,8 +10,6 @@ import { Clients } from "./pages/Clients";
 import ClientDetail from "./pages/ClientDetail"; 
 import { ClientForm } from "./pages/ClientForm";
 import { Messages } from "./pages/Messages";
-import { Documents } from "./pages/Documents";
-import { Notifications } from "./pages/Notifications";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -31,8 +29,6 @@ const App = () => (
             <Route path="clients/:id/edit" element={<ClientForm />} />
             <Route path="clients/new" element={<ClientForm />} />
             <Route path="messages" element={<Messages />} />
-            <Route path="documents" element={<Documents />} />
-            <Route path="notifications" element={<Notifications />} />
           </Route>
           <Route path="*" element={<NotFound />} />
         </Routes>
