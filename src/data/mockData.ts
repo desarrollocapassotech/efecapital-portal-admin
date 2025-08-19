@@ -80,7 +80,8 @@ export const mockMessages: Message[] = [
     content: '¡Hola! Quería consultarte sobre la evolución de mi cartera este mes. ¿Podrías enviarme un reporte?',
     timestamp: new Date('2024-01-18T10:30:00'),
     isFromAdvisor: false,
-    status: 'pendiente'
+    status: 'pendiente',
+    read: false
   },
   {
     id: '2',

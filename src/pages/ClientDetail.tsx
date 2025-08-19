@@ -14,6 +14,9 @@ import {
   Building,
   FileDown,
   Send,
+  Paperclip,
+  X,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
@@ -38,6 +41,7 @@ const ClientDetail = () => {
   } = useDataStore();
 
   const [newMessage, setNewMessage] = useState('');
+  const [attachments, setAttachments] = useState<File[]>([]);
   const [newNote, setNewNote] = useState('');
 
   const client = clients.find((c) => c.id === id);
@@ -82,6 +86,9 @@ const ClientDetail = () => {
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
   const handleSendMessage = () => {
+    if (!newMessage.trim() && attachments.length === 0) return;
+
+    // Enviar mensaje de texto
     if (newMessage.trim()) {
       addMessage({
         clientId: id!,
@@ -90,8 +97,33 @@ const ClientDetail = () => {
         isFromAdvisor: true,
         status: 'respondido',
       });
-      setNewMessage('');
     }
+
+    // Enviar cada archivo como mensaje
+    attachments.forEach((file) => {
+      const content = `[${file.type.startsWith('image/') ? 'Imagen' : 'PDF'}: ${file.name}]`;
+      addMessage({
+        clientId: id!,
+        content,
+        timestamp: new Date(),
+        isFromAdvisor: true,
+        status: 'respondido',
+      });
+    });
+
+    // Limpiar
+    setNewMessage('');
+    setAttachments([]);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setAttachments((prev) => [...prev, ...Array.from(e.target.files!)]);
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(attachments.filter((_, i) => i !== index));
   };
 
   const handleUpdateNotes = () => {
@@ -170,8 +202,6 @@ const ClientDetail = () => {
 
       {/* === PARTE SUPERIOR: Igual que el dashboard del cliente === */}
       <div className="space-y-6">
-        
-
         {/* Profile Overview */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
@@ -235,73 +265,131 @@ const ClientDetail = () => {
         </TabsList>
 
         {/* Messages Tab */}
-        <TabsContent value="messages" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MessageCircle className="h-5 w-5" />
-                Centro de Comunicaciones
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-3">
-                <Textarea
-                  placeholder="Escribir nuevo mensaje al cliente..."
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  rows={3}
-                />
-                <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
-                  <Send className="h-4 w-4 mr-2" />
-                  Enviar Mensaje
-                </Button>
-              </div>
-
-              <div className="space-y-3">
-                <h4 className="font-medium">Historial de Conversación</h4>
-                {clientMessages.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">No hay mensajes todavía</p>
-                ) : (
-                  <div className="max-h-96 overflow-y-auto space-y-3 p-2">
-                    {clientMessages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`p-3 rounded-lg ${
-                          message.isFromAdvisor
-                            ? 'bg-primary/10 border-l-4 border-primary ml-8'
-                            : 'bg-muted border-l-4 border-border mr-8'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium">
-                            {message.isFromAdvisor ? 'Tú (Asesora)' : client.firstName}
-                          </span>
-                          <div className="flex items-center space-x-2">
-                            <Badge className={getStatusColor(message.status)}>{message.status}</Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {format(message.timestamp, 'dd/MM HH:mm', { locale: es })}
-                            </span>
-                          </div>
-                        </div>
-                        <p className="text-sm">{message.content}</p>
-                        {!message.isFromAdvisor && message.status === 'pendiente' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="mt-2"
-                            onClick={() => updateMessageStatus(message.id, 'respondido')}
-                          >
-                            Marcar como Respondido
-                          </Button>
-                        )}
-                      </div>
-                    ))}
+<TabsContent value="messages" className="flex flex-col h-full">
+  <Card className="flex-1 flex flex-col">
+    <CardHeader>
+      <CardTitle className="flex items-center gap-2">
+        <MessageCircle className="h-5 w-5" />
+        Centro de Comunicaciones
+      </CardTitle>
+    </CardHeader>
+    <CardContent className="flex-1 flex flex-col space-y-4">
+      {/* Historial de mensajes (arriba) */}
+      <div className="flex-1 overflow-y-auto p-2 space-y-3">
+        {clientMessages.length === 0 ? (
+          <p className="text-center text-muted-foreground py-4">No hay mensajes todavía</p>
+        ) : (
+          <div className="space-y-3">
+            {clientMessages.map((message) => (
+              <div
+                key={message.id}
+                className={`p-3 rounded-lg ${
+                  message.isFromAdvisor
+                    ? 'bg-primary/10 border-l-4 border-primary ml-8'
+                    : 'bg-muted border-l-4 border-border mr-8'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">
+                    {message.isFromAdvisor ? 'Tú (Asesora)' : client.firstName}
+                  </span>
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getStatusColor(message.status)}>{message.status}</Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {format(message.timestamp, 'dd/MM HH:mm', { locale: es })}
+                    </span>
                   </div>
+                </div>
+                <p className="text-sm">{message.content}</p>
+                {!message.isFromAdvisor && message.status === 'pendiente' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-2"
+                    onClick={() => updateMessageStatus(message.id, 'respondido')}
+                  >
+                    Marcar como Respondido
+                  </Button>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Input de mensaje (abajo) */}
+      <div className="space-y-3 border-t pt-4">
+        {/* Vista previa de adjuntos */}
+        {attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 p-2 bg-muted rounded">
+            {attachments.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-1 bg-background px-2 py-1 rounded text-sm border"
+              >
+                {file.type.startsWith('image/') ? (
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="max-w-xs truncate">{file.name}</span>
+                <button
+                  onClick={() => removeAttachment(index)}
+                  className="text-destructive hover:text-red-700"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <div className="flex items-end gap-2">
+          {/* Botón de adjuntar */}
+          <label className="cursor-pointer p-2 hover:bg-muted rounded">
+            <Paperclip className="h-5 w-5 text-muted-foreground" />
+            <input
+              type="file"
+              multiple
+              accept=".pdf,image/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+          </label>
+
+          {/* Área de texto */}
+          <Textarea
+            placeholder="Escribir nuevo mensaje al cliente..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+            rows={3}
+            className="flex-1"
+          />
+
+          {/* Botón de enviar */}
+          <Button
+            onClick={handleSendMessage}
+            disabled={!newMessage.trim() && attachments.length === 0}
+            size="icon"
+          >
+            <Send className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <p className="text-xs text-muted-foreground">
+          Puedes adjuntar PDFs o imágenes. Presiona{' '}
+          <kbd className="px-1 bg-background border rounded">Enter</kbd> para enviar.
+        </p>
+      </div>
+    </CardContent>
+  </Card>
+</TabsContent>
 
         {/* Documents Tab */}
         <TabsContent value="documents" className="space-y-4">
