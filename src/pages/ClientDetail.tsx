@@ -161,18 +161,18 @@ const ClientDetail = () => {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'pendiente':
-        return 'bg-warning text-warning-foreground';
-      case 'respondido':
-        return 'bg-success text-success-foreground';
-      case 'en_revision':
-        return 'bg-primary text-primary-foreground';
-      default:
-        return 'bg-secondary text-secondary-foreground';
-    }
-  };
+  // const getStatusColor = (status: string) => {
+  //   switch (status) {
+  //     case 'pendiente':
+  //       return 'bg-warning text-warning-foreground';
+  //     case 'respondido':
+  //       return 'bg-success text-success-foreground';
+  //     case 'en_revision':
+  //       return 'bg-primary text-primary-foreground';
+  //     default:
+  //       return 'bg-secondary text-secondary-foreground';
+  //   }
+  // };
 
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -293,24 +293,11 @@ const ClientDetail = () => {
                   <span className="text-sm font-medium">
                     {message.isFromAdvisor ? 'Tú (Asesora)' : client.firstName}
                   </span>
-                  <div className="flex items-center space-x-2">
-                    <Badge className={getStatusColor(message.status)}>{message.status}</Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {format(message.timestamp, 'dd/MM HH:mm', { locale: es })}
-                    </span>
-                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {format(message.timestamp, 'dd/MM HH:mm', { locale: es })}
+                  </span>
                 </div>
                 <p className="text-sm">{message.content}</p>
-                {!message.isFromAdvisor && message.status === 'pendiente' && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="mt-2"
-                    onClick={() => updateMessageStatus(message.id, 'respondido')}
-                  >
-                    Marcar como Respondido
-                  </Button>
-                )}
               </div>
             ))}
           </div>
