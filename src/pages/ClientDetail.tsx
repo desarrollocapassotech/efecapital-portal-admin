@@ -161,19 +161,6 @@ const ClientDetail = () => {
     }
   };
 
-  // const getStatusColor = (status: string) => {
-  //   switch (status) {
-  //     case 'pendiente':
-  //       return 'bg-warning text-warning-foreground';
-  //     case 'respondido':
-  //       return 'bg-success text-success-foreground';
-  //     case 'en_revision':
-  //       return 'bg-primary text-primary-foreground';
-  //     default:
-  //       return 'bg-secondary text-secondary-foreground';
-  //   }
-  // };
-
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-6">
       {/* Header */}
