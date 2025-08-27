@@ -249,7 +249,6 @@ const ClientDetail = () => {
         <TabsList>
           <TabsTrigger value="messages">Mensajes</TabsTrigger>
           <TabsTrigger value="notes">Notas Internas</TabsTrigger>
-          <TabsTrigger value="activity">Actividad</TabsTrigger>
         </TabsList>
 
         {/* === MESSAGES TAB === */}
@@ -496,37 +495,6 @@ const ClientDetail = () => {
                   <p className="text-muted-foreground text-sm">No hay notas registradas.</p>
                 )}
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* === ACTIVIDAD === */}
-        <TabsContent value="activity" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Timeline de Actividad</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {clientActivities.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No hay actividades registradas</p>
-              ) : (
-                <div className="space-y-4">
-                  {clientActivities.map((activity) => (
-                    <div key={activity.id} className="flex space-x-3">
-                      <div className="flex-shrink-0 w-2 h-2 bg-primary rounded-full mt-2"></div>
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <h4 className="font-medium text-sm">{activity.title}</h4>
-                          <span className="text-xs text-muted-foreground">
-                            {format(activity.timestamp, 'dd/MM/yyyy HH:mm', { locale: es })}
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">{activity.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
             </CardContent>
           </Card>
         </TabsContent>
