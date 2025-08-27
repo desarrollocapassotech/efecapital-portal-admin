@@ -1,22 +1,20 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { FileDown } from 'lucide-react';
 import {
   ArrowLeft,
   Edit,
   MessageCircle,
-  FileText,
   Clock,
-  User,
   Mail,
-  Phone,
   TrendingUp,
   Target,
   Building,
-  FileDown,
   Send,
   Paperclip,
   X,
   Image as ImageIcon,
+  FileText,
 } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
@@ -33,10 +31,8 @@ const ClientDetail = () => {
   const {
     clients,
     messages,
-    documents,
     activities,
     addMessage,
-    updateMessageStatus,
     updateClient,
   } = useDataStore();
 
@@ -76,10 +72,6 @@ const ClientDetail = () => {
   const clientMessages = messages
     .filter((m) => m.clientId === id)
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-  const clientDocuments = documents
-    .filter((d) => d.clientId === id)
-    .sort((a, b) => new Date(b.uploadDate).getTime() - new Date(a.uploadDate).getTime());
 
   const clientActivities = activities
     .filter((a) => a.clientId === id)
@@ -148,19 +140,6 @@ const ClientDetail = () => {
     }
   };
 
-  const getProfileColor = (profile: string) => {
-    switch (profile) {
-      case 'conservador':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'moderado':
-        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'agresivo':
-        return 'bg-red-100 text-red-800 border-red-200';
-      default:
-        return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
   return (
     <div className="flex-1 overflow-y-auto p-6 space-y-6">
       {/* Header */}
@@ -187,9 +166,9 @@ const ClientDetail = () => {
         </Button>
       </div>
 
-      {/* === PARTE SUPERIOR: Igual que el dashboard del cliente === */}
+      {/* === PARTE SUPERIOR: Información del cliente === */}
       <div className="space-y-6">
-        {/* Profile Overview */}
+        {/* Tipo de inversor y Bróker */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -214,7 +193,7 @@ const ClientDetail = () => {
           </Card>
         </div>
 
-        {/* Objectives */}
+        {/* Objetivos */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -227,7 +206,7 @@ const ClientDetail = () => {
           </CardContent>
         </Card>
 
-        {/* Contact */}
+        {/* Contacto */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -242,174 +221,167 @@ const ClientDetail = () => {
         </Card>
       </div>
 
-      {/* === PARTE INFERIOR: Tabs admin (mensajes, documentos, etc.) === */}
+      {/* === Pestañas: Mensajes, Notas, Actividad === */}
       <Tabs defaultValue="messages" className="space-y-6">
         <TabsList>
           <TabsTrigger value="messages">Mensajes</TabsTrigger>
-          <TabsTrigger value="documents">Documentos</TabsTrigger>
           <TabsTrigger value="notes">Notas Internas</TabsTrigger>
           <TabsTrigger value="activity">Actividad</TabsTrigger>
         </TabsList>
 
-        {/* Messages Tab */}
-<TabsContent value="messages" className="flex flex-col h-full">
-  <Card className="flex-1 flex flex-col">
-    <CardHeader>
-      <CardTitle className="flex items-center gap-2">
-        <MessageCircle className="h-5 w-5" />
-        Centro de Comunicaciones
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="flex-1 flex flex-col space-y-4">
-      {/* Historial de mensajes (arriba) */}
-      <div className="flex-1 overflow-y-auto p-2 space-y-3">
-        {clientMessages.length === 0 ? (
-          <p className="text-center text-muted-foreground py-4">No hay mensajes todavía</p>
-        ) : (
-          <div className="space-y-3">
-            {clientMessages.map((message) => (
-              <div
-                key={message.id}
-                className={`p-3 rounded-lg ${
-                  message.isFromAdvisor
-                    ? 'bg-primary/10 border-l-4 border-primary ml-8'
-                    : 'bg-muted border-l-4 border-border mr-8'
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">
-                    {message.isFromAdvisor ? 'Tú (Asesora)' : client.firstName}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {format(message.timestamp, 'dd/MM HH:mm', { locale: es })}
-                  </span>
-                </div>
-                <p className="text-sm">{message.content}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Input de mensaje (abajo) */}
-      <div className="space-y-3 border-t pt-4">
-        {/* Vista previa de adjuntos */}
-        {attachments.length > 0 && (
-          <div className="flex flex-wrap gap-2 p-2 bg-muted rounded">
-            {attachments.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-1 bg-background px-2 py-1 rounded text-sm border"
-              >
-                {file.type.startsWith('image/') ? (
-                  <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                ) : (
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                )}
-                <span className="max-w-xs truncate">{file.name}</span>
-                <button
-                  onClick={() => removeAttachment(index)}
-                  className="text-destructive hover:text-red-700"
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="flex items-end gap-2">
-          {/* Botón de adjuntar */}
-          <label className="cursor-pointer p-2 hover:bg-muted rounded">
-            <Paperclip className="h-5 w-5 text-muted-foreground" />
-            <input
-              type="file"
-              multiple
-              accept=".pdf,image/*"
-              className="hidden"
-              onChange={handleFileChange}
-            />
-          </label>
-
-          {/* Área de texto */}
-          <Textarea
-            placeholder="Escribir nuevo mensaje al cliente..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }}
-            rows={3}
-            className="flex-1"
-          />
-
-          {/* Botón de enviar */}
-          <Button
-            onClick={handleSendMessage}
-            disabled={!newMessage.trim() && attachments.length === 0}
-            size="icon"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-
-        <p className="text-xs text-muted-foreground">
-          Puedes adjuntar PDFs o imágenes. Presiona{' '}
-          <kbd className="px-1 bg-background border rounded">Enter</kbd> para enviar.
-        </p>
-      </div>
-    </CardContent>
-  </Card>
-</TabsContent>
-
-        {/* Documents Tab */}
-        <TabsContent value="documents" className="space-y-4">
-          <Card>
+        {/* === MESSAGES TAB === */}
+        <TabsContent value="messages" className="flex flex-col h-full">
+          <Card className="flex-1 flex flex-col">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="h-5 w-5" />
-                Documentos del Cliente
+                <MessageCircle className="h-5 w-5" />
+                Centro de Comunicaciones
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              {clientDocuments.length === 0 ? (
-                <p className="text-center text-muted-foreground py-8">No hay documentos subidos</p>
-              ) : (
-                <div className="space-y-3">
-                  {clientDocuments.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between p-3 border border-border rounded-lg"
-                    >
-                      <div className="flex items-center space-x-3">
-                        <FileText className="h-8 w-8 text-primary" />
-                        <div>
-                          <h4 className="font-medium">{doc.name}</h4>
-                          <p className="text-sm text-muted-foreground">{doc.description}</p>
-                          <div className="flex items-center space-x-2 mt-1">
-                            <Badge variant="outline">{doc.type}</Badge>
+            <CardContent className="flex-1 flex flex-col space-y-4">
+              {/* Historial de mensajes */}
+              <div className="flex-1 overflow-y-auto p-2 space-y-3">
+                {clientMessages.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">No hay mensajes todavía</p>
+                ) : (
+                  <div className="space-y-3">
+                    {clientMessages.map((message) => {
+                      const isFile =
+                        message.content.startsWith('[PDF:') || message.content.startsWith('[Imagen:');
+
+                      // Extraemos el nombre del archivo del contenido: `[PDF: nombre.pdf]`
+                      const getFileName = () => {
+                        const match = message.content.match(/\[.*?:\s*(.+?)\]/);
+                        return match ? match[1] : 'Archivo';
+                      };
+
+                      const fileName = getFileName();
+
+                      return (
+                        <div
+                          key={message.id}
+                          className={`p-3 rounded-lg max-w-[80%] ${message.isFromAdvisor
+                              ? 'bg-primary/10 border-l-4 border-primary ml-8 self-end'
+                              : 'bg-muted border-l-4 border-border mr-8 self-start'
+                            }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-medium">
+                              {message.isFromAdvisor ? 'Tú (Asesora)' : client.firstName}
+                            </span>
                             <span className="text-xs text-muted-foreground">
-                              {format(doc.uploadDate, 'dd/MM/yyyy HH:mm', { locale: es })}
+                              {format(message.timestamp, 'dd/MM HH:mm', { locale: es })}
                             </span>
                           </div>
+
+                          {isFile ? (
+                            // Vista especial para archivos
+                            <div
+                              className={`flex items-center gap-3 p-3 bg-background border border-border rounded-lg shadow-sm cursor-pointer hover:shadow transition-shadow`}
+                              onClick={() => alert(`Simulando descarga de: ${fileName}`)}
+                            >
+                              {message.content.startsWith('[Imagen:') ? (
+                                <div className="w-10 h-10 bg-muted rounded flex items-center justify-center">
+                                  <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                                </div>
+                              ) : (
+                                <div className="w-10 h-10 bg-primary/10 rounded flex items-center justify-center">
+                                  <FileText className="h-6 w-6 text-primary" />
+                                </div>
+                              )}
+
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-medium truncate">{fileName}</h4>
+                                <p className="text-xs text-muted-foreground">
+                                  {message.content.startsWith('[Imagen:') ? 'Imagen' : 'Documento PDF'}
+                                </p>
+                              </div>
+
+                              <FileDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                            </div>
+                          ) : (
+                            // Mensaje de texto normal
+                            <p className="text-sm">{message.content}</p>
+                          )}
                         </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Input de mensaje */}
+              <div className="space-y-3 border-t pt-4">
+                {/* Vista previa de adjuntos */}
+                {attachments.length > 0 && (
+                  <div className="flex flex-wrap gap-2 p-2 bg-muted rounded">
+                    {attachments.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center gap-1 bg-background px-2 py-1 rounded text-sm border"
+                      >
+                        {file.type.startsWith('image/') ? (
+                          <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <span className="max-w-xs truncate">{file.name}</span>
+                        <button
+                          onClick={() => removeAttachment(index)}
+                          className="text-destructive hover:text-red-700"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
                       </div>
-                      <Button variant="outline" size="sm">
-                        <FileDown className="h-4 w-4 mr-2" />
-                        Descargar
-                      </Button>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex items-end gap-2">
+                  <label className="cursor-pointer p-2 hover:bg-muted rounded">
+                    <Paperclip className="h-5 w-5 text-muted-foreground" />
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,image/*"
+                      className="hidden"
+                      onChange={handleFileChange}
+                    />
+                  </label>
+
+                  <Textarea
+                    placeholder="Escribir nuevo mensaje al cliente..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    rows={3}
+                    className="flex-1"
+                  />
+
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!newMessage.trim() && attachments.length === 0}
+                    size="icon"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
                 </div>
-              )}
+
+                <p className="text-xs text-muted-foreground">
+                  Puedes adjuntar PDFs o imágenes. Presiona{' '}
+                  <kbd className="px-1 bg-background border rounded">Enter</kbd> para enviar.
+                </p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
-        {/* Notes Tab */}
+        {/* === NOTAS INTERNAS === */}
         <TabsContent value="notes" className="space-y-4">
           <Card>
             <CardHeader>
@@ -440,7 +412,7 @@ const ClientDetail = () => {
           </Card>
         </TabsContent>
 
-        {/* Activity Tab */}
+        {/* === ACTIVIDAD === */}
         <TabsContent value="activity" className="space-y-4">
           <Card>
             <CardHeader>
