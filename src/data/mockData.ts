@@ -11,7 +11,12 @@ export const mockClients: Client[] = [
     objectives: 'Preservación de capital y crecimiento a largo plazo',
     investmentHorizon: '10-15 años',
     broker: 'Banco Galicia',
-    notes: 'Cliente muy meticulosa, prefiere inversiones de bajo riesgo. Tiene experiencia previa con fondos comunes.',
+    notes: [
+      {
+        text: 'Cliente muy meticulosa, prefiere inversiones de bajo riesgo. Tiene experiencia previa con fondos comunes.',
+        date: new Date('2023-06-15').toISOString() // misma fecha que createdAt
+      }
+    ],
     lastContact: new Date('2024-01-15'),
     createdAt: new Date('2023-06-15')
   },
@@ -25,7 +30,12 @@ export const mockClients: Client[] = [
     objectives: 'Máximo crecimiento del capital',
     investmentHorizon: '5-7 años',
     broker: 'Invertir Online',
-    notes: 'Inversor experimentado, busca oportunidades de alto rendimiento. Dispuesto a asumir riesgos.',
+    notes: [
+      {
+        text: 'Cliente muy meticulosa, prefiere inversiones de bajo riesgo. Tiene experiencia previa con fondos comunes.',
+        date: new Date('2023-06-15').toISOString() // misma fecha que createdAt
+      }
+    ],
     lastContact: new Date('2024-01-18'),
     createdAt: new Date('2023-08-10')
   },
@@ -39,7 +49,12 @@ export const mockClients: Client[] = [
     objectives: 'Diversificación y crecimiento balanceado',
     investmentHorizon: '7-10 años',
     broker: 'BYMA',
-    notes: 'Busca equilibrio entre riesgo y rendimiento. Interesada en ETFs internacionales.',
+    notes: [
+      {
+        text: 'Cliente muy meticulosa, prefiere inversiones de bajo riesgo. Tiene experiencia previa con fondos comunes.',
+        date: new Date('2023-06-15').toISOString() // misma fecha que createdAt
+      }
+    ],
     lastContact: new Date('2024-01-10'),
     createdAt: new Date('2023-04-20')
   },
@@ -53,7 +68,12 @@ export const mockClients: Client[] = [
     objectives: 'Ingresos regulares y seguridad',
     investmentHorizon: '3-5 años',
     broker: 'Banco Santander',
-    notes: 'Próximo a la jubilación, prioriza la estabilidad sobre el crecimiento.',
+    notes: [
+      {
+        text: 'Cliente muy meticulosa, prefiere inversiones de bajo riesgo. Tiene experiencia previa con fondos comunes.',
+        date: new Date('2023-06-15').toISOString() // misma fecha que createdAt
+      }
+    ],
     lastContact: new Date('2024-01-05'),
     createdAt: new Date('2023-09-05')
   },
@@ -67,7 +87,12 @@ export const mockClients: Client[] = [
     objectives: 'Crecimiento para compra de vivienda',
     investmentHorizon: '2-3 años',
     broker: 'Portfolio Personal',
-    notes: 'Joven profesional, busca inversiones para objetivos específicos a mediano plazo.',
+    notes: [
+      {
+        text: 'Cliente muy meticulosa, prefiere inversiones de bajo riesgo. Tiene experiencia previa con fondos comunes.',
+        date: new Date('2023-06-15').toISOString() // misma fecha que createdAt
+      }
+    ],
     lastContact: new Date('2024-01-12'),
     createdAt: new Date('2023-11-30')
   }

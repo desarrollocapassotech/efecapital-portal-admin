@@ -8,9 +8,14 @@ export interface Client {
   objectives: string;
   investmentHorizon: string;
   broker: string;
-  notes: string;
+  notes?: Note[];
   lastContact: Date;
   createdAt: Date;
+}
+
+export interface Note {
+  text: string;
+  date: string; 
 }
 
 export interface Message {

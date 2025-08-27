@@ -5,7 +5,6 @@ import {
   ArrowLeft,
   Edit,
   MessageCircle,
-  Clock,
   Mail,
   TrendingUp,
   Target,
@@ -24,7 +23,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getMockDataForUser } from '@/data/mockData';
 
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,6 +37,8 @@ const ClientDetail = () => {
   const [newMessage, setNewMessage] = useState('');
   const [attachments, setAttachments] = useState<File[]>([]);
   const [newNote, setNewNote] = useState('');
+  const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState('');
 
   const client = clients.find((c) => c.id === id);
 
@@ -66,9 +66,6 @@ const ClientDetail = () => {
     email: client.email,
   };
 
-  // Datos mockeados del cliente
-  const mockData = getMockDataForUser(user.id);
-
   const clientMessages = messages
     .filter((m) => m.clientId === id)
     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -80,7 +77,6 @@ const ClientDetail = () => {
   const handleSendMessage = () => {
     if (!newMessage.trim() && attachments.length === 0) return;
 
-    // Enviar mensaje de texto
     if (newMessage.trim()) {
       addMessage({
         clientId: id!,
@@ -91,7 +87,6 @@ const ClientDetail = () => {
       });
     }
 
-    // Enviar cada archivo como mensaje
     attachments.forEach((file) => {
       const content = `[${file.type.startsWith('image/') ? 'Imagen' : 'PDF'}: ${file.name}]`;
       addMessage({
@@ -103,7 +98,6 @@ const ClientDetail = () => {
       });
     });
 
-    // Limpiar
     setNewMessage('');
     setAttachments([]);
   };
@@ -119,12 +113,44 @@ const ClientDetail = () => {
   };
 
   const handleUpdateNotes = () => {
-    if (newNote.trim()) {
-      updateClient(id!, {
-        notes: client.notes + '\n\n' + new Date().toLocaleDateString() + ': ' + newNote,
-      });
-      setNewNote('');
-    }
+    if (!newNote.trim()) return;
+
+    const updatedNotes = [
+      ...(client.notes || []),
+      {
+        text: newNote.trim(),
+        date: new Date().toISOString(),
+      },
+    ];
+
+    updateClient(id!, { notes: updatedNotes });
+    setNewNote('');
+  };
+
+  const startEditing = (index: number) => {
+    if (!client.notes || !Array.isArray(client.notes)) return;
+    const note = client.notes[index];
+    setEditingNoteIndex(index);
+    setEditingNoteText(note.text);
+  };
+
+  const cancelEdit = () => {
+    setEditingNoteIndex(null);
+    setEditingNoteText('');
+  };
+
+  const saveEdit = () => {
+    if (editingNoteIndex === null || !editingNoteText.trim()) return;
+
+    const updatedNotes = [...(client.notes || [])];
+    updatedNotes[editingNoteIndex] = {
+      ...updatedNotes[editingNoteIndex],
+      text: editingNoteText.trim(),
+    };
+
+    updateClient(id!, { notes: updatedNotes });
+    setEditingNoteIndex(null);
+    setEditingNoteText('');
   };
 
   const getTipoInversorColor = (tipo: string) => {
@@ -166,9 +192,8 @@ const ClientDetail = () => {
         </Button>
       </div>
 
-      {/* === PARTE SUPERIOR: Información del cliente === */}
+      {/* === Información del cliente === */}
       <div className="space-y-6">
-        {/* Tipo de inversor y Bróker */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -193,7 +218,6 @@ const ClientDetail = () => {
           </Card>
         </div>
 
-        {/* Objetivos */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -206,7 +230,6 @@ const ClientDetail = () => {
           </CardContent>
         </Card>
 
-        {/* Contacto */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -221,7 +244,7 @@ const ClientDetail = () => {
         </Card>
       </div>
 
-      {/* === Pestañas: Mensajes, Notas, Actividad === */}
+      {/* === Pestañas === */}
       <Tabs defaultValue="messages" className="space-y-6">
         <TabsList>
           <TabsTrigger value="messages">Mensajes</TabsTrigger>
@@ -239,7 +262,6 @@ const ClientDetail = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col space-y-4">
-              {/* Historial de mensajes */}
               <div className="flex-1 overflow-y-auto p-2 space-y-3">
                 {clientMessages.length === 0 ? (
                   <p className="text-center text-muted-foreground py-4">No hay mensajes todavía</p>
@@ -249,7 +271,6 @@ const ClientDetail = () => {
                       const isFile =
                         message.content.startsWith('[PDF:') || message.content.startsWith('[Imagen:');
 
-                      // Extraemos el nombre del archivo del contenido: `[PDF: nombre.pdf]`
                       const getFileName = () => {
                         const match = message.content.match(/\[.*?:\s*(.+?)\]/);
                         return match ? match[1] : 'Archivo';
@@ -260,10 +281,11 @@ const ClientDetail = () => {
                       return (
                         <div
                           key={message.id}
-                          className={`p-3 rounded-lg max-w-[80%] ${message.isFromAdvisor
+                          className={`p-3 rounded-lg max-w-[80%] ${
+                            message.isFromAdvisor
                               ? 'bg-primary/10 border-l-4 border-primary ml-8 self-end'
                               : 'bg-muted border-l-4 border-border mr-8 self-start'
-                            }`}
+                          }`}
                         >
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium">
@@ -275,9 +297,8 @@ const ClientDetail = () => {
                           </div>
 
                           {isFile ? (
-                            // Vista especial para archivos
                             <div
-                              className={`flex items-center gap-3 p-3 bg-background border border-border rounded-lg shadow-sm cursor-pointer hover:shadow transition-shadow`}
+                              className="flex items-center gap-3 p-3 bg-background border border-border rounded-lg shadow-sm cursor-pointer hover:shadow transition-shadow"
                               onClick={() => alert(`Simulando descarga de: ${fileName}`)}
                             >
                               {message.content.startsWith('[Imagen:') ? (
@@ -300,7 +321,6 @@ const ClientDetail = () => {
                               <FileDown className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                             </div>
                           ) : (
-                            // Mensaje de texto normal
                             <p className="text-sm">{message.content}</p>
                           )}
                         </div>
@@ -310,9 +330,7 @@ const ClientDetail = () => {
                 )}
               </div>
 
-              {/* Input de mensaje */}
               <div className="space-y-3 border-t pt-4">
-                {/* Vista previa de adjuntos */}
                 {attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 p-2 bg-muted rounded">
                     {attachments.map((file, index) => (
@@ -387,10 +405,11 @@ const ClientDetail = () => {
             <CardHeader>
               <CardTitle>Notas Internas</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
+              {/* Añadir nueva nota */}
               <div className="space-y-3">
                 <Textarea
-                  placeholder="Agregar nueva nota interna..."
+                  placeholder="Agregar una nueva nota interna..."
                   value={newNote}
                   onChange={(e) => setNewNote(e.target.value)}
                   rows={3}
@@ -400,13 +419,82 @@ const ClientDetail = () => {
                 </Button>
               </div>
 
+              {/* Historial de notas */}
               <div className="space-y-3">
                 <h4 className="font-medium">Historial de Notas</h4>
-                <div className="p-3 bg-muted rounded-lg">
-                  <pre className="text-sm whitespace-pre-wrap">
-                    {client.notes || 'No hay notas registradas'}
-                  </pre>
-                </div>
+                {client.notes ? (
+                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
+                    {Array.isArray(client.notes) ? (
+                      [...client.notes]
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .map((note, index) => {
+                          const originalIndex = client.notes!.findIndex(
+                            (n) => n.date === note.date && n.text === note.text
+                          );
+                          const isEditing = editingNoteIndex === originalIndex;
+
+                          return (
+                            <div
+                              key={`${note.date}-${index}`}
+                              className="p-3 bg-muted rounded-lg border border-border space-y-3"
+                            >
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-primary">
+                                  {format(new Date(note.date), 'dd/MM/yyyy HH:mm', { locale: es })}
+                                </span>
+                                {isEditing ? (
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={saveEdit}
+                                      disabled={!editingNoteText.trim()}
+                                    >
+                                      Guardar
+                                    </Button>
+                                    <Button size="sm" variant="outline" onClick={cancelEdit}>
+                                      Cancelar
+                                    </Button>
+                                  </div>
+                                ) : (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => startEditing(originalIndex)}
+                                  >
+                                    <Edit className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
+
+                              {isEditing ? (
+                                <Textarea
+                                  value={editingNoteText}
+                                  onChange={(e) => setEditingNoteText(e.target.value)}
+                                  rows={3}
+                                  className="text-sm"
+                                  autoFocus
+                                />
+                              ) : (
+                                <p className="text-sm whitespace-pre-wrap">{note.text}</p>
+                              )}
+                            </div>
+                          );
+                        })
+                    ) : (
+                      <div className="p-3 bg-muted rounded-lg border border-border">
+                        <span className="text-xs font-medium text-muted-foreground">
+                          {client.createdAt
+                            ? format(new Date(client.createdAt), 'dd/MM/yyyy HH:mm', { locale: es })
+                            : 'Fecha desconocida'}
+                        </span>
+                        <p className="text-sm mt-1 whitespace-pre-wrap">{client.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground text-sm">No hay notas registradas.</p>
+                )}
               </div>
             </CardContent>
           </Card>
