@@ -1,15 +1,15 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Search, 
-  Filter, 
-  Users, 
-  MessageCircle, 
-  FileText, 
+import {
+  Search,
+  Filter,
+  Users,
+  MessageCircle,
+  FileText,
   TrendingUp,
   Clock,
   AlertTriangle,
-  Eye
+  Eye,
 } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
@@ -28,27 +28,35 @@ export const Dashboard = () => {
 
   // Statistics
   const totalClients = clients.length;
-  const pendingMessages = messages.filter(m => m.status === 'pendiente' && !m.isFromAdvisor).length;
-  const unreadNotifications = notifications.filter(n => !n.read).length;
-  const clientsNoContact = clients.filter(c => differenceInDays(new Date(), c.lastContact) > 7).length;
+  const pendingMessages = messages.filter(
+    (m) => m.status === 'pendiente' && !m.isFromAdvisor
+  ).length;
+  const unreadNotifications = notifications.filter((n) => !n.read).length;
+  const clientsNoContact = clients.filter(
+    (c) => differenceInDays(new Date(), c.lastContact) > 7
+  ).length;
 
   // Filtered clients
-  const filteredClients = clients.filter(client => {
-    const matchesSearch = searchTerm === '' || 
+  const filteredClients = clients.filter((client) => {
+    const matchesSearch =
+      searchTerm === '' ||
       client.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.email.toLowerCase().includes(searchTerm.toLowerCase());
 
     const daysSinceContact = differenceInDays(new Date(), client.lastContact);
-    const matchesDays = filterDays === 'all' || 
+    const matchesDays =
+      filterDays === 'all' ||
       (filterDays === '7' && daysSinceContact > 7) ||
       (filterDays === '14' && daysSinceContact > 14) ||
       (filterDays === '30' && daysSinceContact > 30);
 
-    const clientPendingMessages = messages.filter(m => 
-      m.clientId === client.id && m.status === 'pendiente' && !m.isFromAdvisor
+    const clientPendingMessages = messages.filter(
+      (m) =>
+        m.clientId === client.id && m.status === 'pendiente' && !m.isFromAdvisor
     ).length;
-    const matchesMessages = filterMessages === 'all' ||
+    const matchesMessages =
+      filterMessages === 'all' ||
       (filterMessages === 'pending' && clientPendingMessages > 0);
 
     return matchesSearch && matchesDays && matchesMessages;
@@ -56,10 +64,14 @@ export const Dashboard = () => {
 
   const getProfileColor = (profile: string) => {
     switch (profile) {
-      case 'conservador': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'moderado': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'agresivo': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'conservador':
+        return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'moderado':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'agresivo':
+        return 'bg-red-100 text-red-800 border-red-200';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -73,14 +85,14 @@ export const Dashboard = () => {
   return (
     <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-0">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground">
             Vista general de tu gestión financiera
           </p>
         </div>
-        <div className="text-sm text-muted-foreground">
+        <div className="text-sm text-muted-foreground self-start sm:self-center">
           {format(new Date(), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}
         </div>
       </div>
@@ -94,9 +106,7 @@ export const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalClients}</div>
-            <p className="text-xs text-muted-foreground">
-              Cartera completa
-            </p>
+            <p className="text-xs text-muted-foreground">Cartera completa</p>
           </CardContent>
         </Card>
 
@@ -107,9 +117,7 @@ export const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-warning">{pendingMessages}</div>
-            <p className="text-xs text-muted-foreground">
-              Requieren respuesta
-            </p>
+            <p className="text-xs text-muted-foreground">Requieren respuesta</p>
           </CardContent>
         </Card>
 
@@ -120,9 +128,7 @@ export const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">{unreadNotifications}</div>
-            <p className="text-xs text-muted-foreground">
-              Sin revisar
-            </p>
+            <p className="text-xs text-muted-foreground">Sin revisar</p>
           </CardContent>
         </Card>
 
@@ -133,9 +139,7 @@ export const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{clientsNoContact}</div>
-            <p className="text-xs text-muted-foreground">
-              Más de 7 días
-            </p>
+            <p className="text-xs text-muted-foreground">Más de 7 días</p>
           </CardContent>
         </Card>
       </div>
@@ -207,47 +211,58 @@ export const Dashboard = () => {
             ) : (
               filteredClients.map((client) => {
                 const daysSinceContact = differenceInDays(new Date(), client.lastContact);
-                const clientPendingMessages = messages.filter(m => 
-                  m.clientId === client.id && m.status === 'pendiente' && !m.isFromAdvisor
+                const clientPendingMessages = messages.filter(
+                  (m) =>
+                    m.clientId === client.id && m.status === 'pendiente' && !m.isFromAdvisor
                 ).length;
 
                 return (
                   <div
                     key={client.id}
-                    className="flex items-center justify-between p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
+                    className="flex flex-col sm:flex-row sm:items-center gap-3 p-4 border border-border rounded-lg hover:bg-muted/50 transition-colors"
                   >
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
+                    {/* Avatar + Nombre */}
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
                         <span className="text-sm font-medium text-primary-foreground">
-                          {client.firstName[0]}{client.lastName[0]}
+                          {client.firstName[0]}
+                          {client.lastName[0]}
                         </span>
                       </div>
-                      <div className="flex-1">
-                        <h3 className="font-medium text-foreground">
+                      <div>
+                        <h3 className="font-medium text-foreground text-sm sm:text-base">
                           {client.firstName} {client.lastName}
                         </h3>
-                        <div className="flex items-center space-x-3 mt-1">
-                          <Badge 
-                            variant="outline" 
-                            className={getProfileColor(client.investorProfile)}
-                          >
-                            {client.investorProfile}
-                          </Badge>
-                          <span 
-                            className={`text-sm flex items-center gap-1 ${getContactStatusColor(client.lastContact)}`}
-                          >
-                            <Clock className="h-3 w-3" />
-                            Hace {daysSinceContact} días
-                          </span>
-                          {clientPendingMessages > 0 && (
-                            <Badge variant="secondary">
-                              {clientPendingMessages} mensaje{clientPendingMessages > 1 ? 's' : ''} pendiente{clientPendingMessages > 1 ? 's' : ''}
-                            </Badge>
-                          )}
-                        </div>
                       </div>
                     </div>
-                    <Button asChild variant="outline" size="sm">
+
+                    {/* Datos */}
+                    <div className="flex flex-col sm:flex-row gap-2 flex-1">
+                      <Badge variant="outline" className={getProfileColor(client.investorProfile)}>
+                        {client.investorProfile}
+                      </Badge>
+                      <span
+                        className={`text-xs flex items-center gap-1 ${getContactStatusColor(
+                          client.lastContact
+                        )}`}
+                      >
+                        <Clock className="h-3 w-3" />
+                        Hace {daysSinceContact} días
+                      </span>
+                      {clientPendingMessages > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          {clientPendingMessages} mensaje{clientPendingMessages > 1 ? 's' : ''} pendiente{clientPendingMessages > 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Botón Ver Perfil */}
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="self-start sm:self-center"
+                    >
                       <Link to={`/clients/${client.id}`}>
                         <Eye className="h-4 w-4 mr-1" />
                         Ver Perfil
