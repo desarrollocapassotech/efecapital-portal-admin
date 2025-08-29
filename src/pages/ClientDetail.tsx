@@ -170,24 +170,24 @@ const ClientDetail = () => {
     <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-0">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" asChild>
-            <Link to="/clients">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">
-              {client.firstName} {client.lastName}
-            </h1>
-            <p className="text-muted-foreground">Vista completa del cliente</p>
-          </div>
+        <Button variant="outline" size="sm" className="p-2" asChild>
+          <Link to="/clients">
+            <ArrowLeft className="h-4 w-4" />
+            <span className="sr-only">Volver</span>
+          </Link>
+        </Button>
+
+        <div className="flex-1 flex flex-col items-center text-center">
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+            {client.firstName} {client.lastName}
+          </h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Vista completa del cliente</p>
         </div>
-        <Button asChild>
+
+        <Button variant="default" size="sm" className="p-2" asChild>
           <Link to={`/clients/${id}/edit`}>
-            <Edit className="h-4 w-4 mr-2" />
-            Editar
+            <Edit className="h-4 w-4" />
+            <span className="sr-only">Editar</span>
           </Link>
         </Button>
       </div>
@@ -280,11 +280,10 @@ const ClientDetail = () => {
                       return (
                         <div
                           key={message.id}
-                          className={`p-3 rounded-lg max-w-[80%] ${
-                            message.isFromAdvisor
-                              ? 'bg-primary/10 border-l-4 border-primary ml-8 self-end'
-                              : 'bg-muted border-l-4 border-border mr-8 self-start'
-                          }`}
+                          className={`p-3 rounded-lg max-w-[80%] ${message.isFromAdvisor
+                            ? 'bg-primary/10 border-l-4 border-primary ml-8 self-end'
+                            : 'bg-muted border-l-4 border-border mr-8 self-start'
+                            }`}
                         >
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium">
