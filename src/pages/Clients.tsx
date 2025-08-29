@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Plus, Search, Edit, Trash2, MessageCircle, FileText } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
@@ -32,6 +32,18 @@ export const Clients = () => {
   const navigate = useNavigate();
   const { clients, deleteClient, messages, documents } = useDataStore();
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Hook para detectar si es móvil
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const filteredClients = clients.filter(client =>
     client.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -98,7 +110,7 @@ export const Clients = () => {
         </CardContent>
       </Card>
 
-      {/* Clients Table */}
+      {/* Clients List (Responsive: Cards on mobile, Table on desktop) */}
       <Card>
         <CardHeader>
           <CardTitle>
@@ -110,7 +122,101 @@ export const Clients = () => {
             <div className="text-center py-8 text-muted-foreground">
               {searchTerm ? 'No se encontraron clientes' : 'No hay clientes registrados'}
             </div>
+          ) : isMobile ? (
+            // Vista en tarjetas para móviles
+            <div className="space-y-4">
+              {filteredClients.map((client) => {
+                const stats = getClientStats(client.id);
+                return (
+                  <Card key={client.id} className="overflow-hidden shadow-sm">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                            <span className="text-sm font-medium text-primary-foreground">
+                              {client.firstName[0]}{client.lastName[0]}
+                            </span>
+                          </div>
+                          <div>
+                            <div className="font-medium">
+                              {client.firstName} {client.lastName}
+                            </div>
+                            <div className="text-sm text-muted-foreground">ID: {client.id}</div>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className={getProfileColor(client.investorProfile)}>
+                          {client.investorProfile}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-2 text-sm">
+                      <div><strong>Email:</strong> {client.email}</div>
+                      <div><strong>Teléfono:</strong> {client.phone}</div>
+                      <div><strong>Broker:</strong> {client.broker}</div>
+
+                      {/* Estadísticas */}
+                      <div className="flex gap-2 mt-2 text-xs">
+                        {stats.pendingMessages > 0 && (
+                          <Badge variant="destructive">
+                            <MessageCircle className="h-3 w-3 mr-1" />
+                            {stats.pendingMessages} pendiente(s)
+                          </Badge>
+                        )}
+                        <Badge variant="secondary">
+                          <FileText className="h-3 w-3 mr-1" />
+                          {stats.totalDocuments} doc(s)
+                        </Badge>
+                      </div>
+
+                      {/* Acciones */}
+                      <div className="flex justify-end space-x-2 pt-3">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/clients/${client.id}`)}
+                        >
+                          Ver
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/clients/${client.id}/edit`)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>¿Eliminar cliente?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Se eliminarán todos los datos 
+                                del cliente incluyendo mensajes, documentos y actividades.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => handleDeleteClient(client.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Eliminar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           ) : (
+            // Vista en tabla para desktop
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
