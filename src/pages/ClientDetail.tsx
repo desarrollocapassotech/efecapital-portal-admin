@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FileDown } from 'lucide-react';
 import {
   ArrowLeft,
   Edit,
@@ -14,6 +13,7 @@ import {
   X,
   Image as ImageIcon,
   FileText,
+  FileDown,
 } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
@@ -116,7 +116,7 @@ const ClientDetail = () => {
     if (!newNote.trim()) return;
 
     const updatedNotes = [
-      ...(client.notes || []),
+      ...(Array.isArray(client.notes) ? client.notes : []),
       {
         text: newNote.trim(),
         date: new Date().toISOString(),
@@ -130,6 +130,7 @@ const ClientDetail = () => {
   const startEditing = (index: number) => {
     if (!client.notes || !Array.isArray(client.notes)) return;
     const note = client.notes[index];
+    if (!note) return;
     setEditingNoteIndex(index);
     setEditingNoteText(note.text);
   };
@@ -140,9 +141,9 @@ const ClientDetail = () => {
   };
 
   const saveEdit = () => {
-    if (editingNoteIndex === null || !editingNoteText.trim()) return;
+    if (editingNoteIndex === null || !editingNoteText.trim() || !client.notes || !Array.isArray(client.notes)) return;
 
-    const updatedNotes = [...(client.notes || [])];
+    const updatedNotes = [...client.notes];
     updatedNotes[editingNoteIndex] = {
       ...updatedNotes[editingNoteIndex],
       text: editingNoteText.trim(),
@@ -192,7 +193,7 @@ const ClientDetail = () => {
         </Button>
       </div>
 
-      {/* === Información del cliente === */}
+      {/* Información del cliente */}
       <div className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Card>
@@ -244,14 +245,14 @@ const ClientDetail = () => {
         </Card>
       </div>
 
-      {/* === Pestañas === */}
+      {/* Pestañas */}
       <Tabs defaultValue="messages" className="space-y-6">
         <TabsList>
           <TabsTrigger value="messages">Mensajes</TabsTrigger>
           <TabsTrigger value="notes">Notas Internas</TabsTrigger>
         </TabsList>
 
-        {/* === MESSAGES TAB === */}
+        {/* MESSAGES TAB */}
         <TabsContent value="messages" className="flex flex-col h-full">
           <Card className="flex-1 flex flex-col">
             <CardHeader>
@@ -260,8 +261,16 @@ const ClientDetail = () => {
                 Centro de Comunicaciones
               </CardTitle>
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col space-y-4">
-              <div className="flex-1 overflow-y-auto p-2 space-y-3">
+            <CardContent className="flex-1 flex flex-col space-y-4 min-h-0">
+              {/* Historial de mensajes con scroll */}
+              <div
+                className="flex-1 overflow-y-auto p-2 space-y-3 min-h-0"
+                style={{
+                  maxHeight: 'calc(100vh - 400px)',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: '#9ca3af transparent',
+                }}
+              >
                 {clientMessages.length === 0 ? (
                   <p className="text-center text-muted-foreground py-4">No hay mensajes todavía</p>
                 ) : (
@@ -280,17 +289,18 @@ const ClientDetail = () => {
                       return (
                         <div
                           key={message.id}
-                          className={`p-3 rounded-lg max-w-[80%] ${message.isFromAdvisor
-                            ? 'bg-primary/10 border-l-4 border-primary ml-8 self-end'
-                            : 'bg-muted border-l-4 border-border mr-8 self-start'
-                            }`}
+                          className={`p-3 rounded-lg max-w-[80%] ${
+                            message.isFromAdvisor
+                              ? 'bg-primary/10 border-l-4 border-primary ml-8 self-end'
+                              : 'bg-muted border-l-4 border-border mr-8 self-start'
+                          }`}
                         >
                           <div className="flex items-center justify-between mb-2">
                             <span className="text-sm font-medium">
                               {message.isFromAdvisor ? 'Tú (Asesora)' : client.firstName}
                             </span>
                             <span className="text-xs text-muted-foreground">
-                              {format(message.timestamp, 'dd/MM HH:mm', { locale: es })}
+                              {format(new Date(message.timestamp), 'dd/MM HH:mm', { locale: es })}
                             </span>
                           </div>
 
@@ -328,6 +338,7 @@ const ClientDetail = () => {
                 )}
               </div>
 
+              {/* Input de mensaje */}
               <div className="space-y-3 border-t pt-4">
                 {attachments.length > 0 && (
                   <div className="flex flex-wrap gap-2 p-2 bg-muted rounded">
@@ -345,6 +356,7 @@ const ClientDetail = () => {
                         <button
                           onClick={() => removeAttachment(index)}
                           className="text-destructive hover:text-red-700"
+                          aria-label={`Eliminar ${file.name}`}
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -354,7 +366,10 @@ const ClientDetail = () => {
                 )}
 
                 <div className="flex items-end gap-2">
-                  <label className="cursor-pointer p-2 hover:bg-muted rounded">
+                  <label
+                    className="cursor-pointer p-2 hover:bg-muted rounded"
+                    aria-label="Adjuntar archivo"
+                  >
                     <Paperclip className="h-5 w-5 text-muted-foreground" />
                     <input
                       type="file"
@@ -383,6 +398,7 @@ const ClientDetail = () => {
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim() && attachments.length === 0}
                     size="icon"
+                    aria-label="Enviar mensaje"
                   >
                     <Send className="h-4 w-4" />
                   </Button>
@@ -397,14 +413,13 @@ const ClientDetail = () => {
           </Card>
         </TabsContent>
 
-        {/* === NOTAS INTERNAS === */}
+        {/* NOTAS INTERNAS */}
         <TabsContent value="notes" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>Notas Internas</CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Añadir nueva nota */}
               <div className="space-y-3">
                 <Textarea
                   placeholder="Agregar una nueva nota interna..."
@@ -417,13 +432,15 @@ const ClientDetail = () => {
                 </Button>
               </div>
 
-              {/* Historial de notas */}
               <div className="space-y-3">
                 <h4 className="font-medium">Historial de Notas</h4>
                 {client.notes ? (
-                  <div className="space-y-4 max-h-96 overflow-y-auto pr-2">
-                    {Array.isArray(client.notes) ? (
-                      [...client.notes]
+                  Array.isArray(client.notes) ? (
+                    <div
+                      className="space-y-4 max-h-[400px] overflow-y-auto pr-2"
+                      style={{ scrollbarWidth: 'thin', scrollbarColor: '#9ca3af transparent' }}
+                    >
+                      {[...client.notes]
                         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                         .map((note, index) => {
                           const originalIndex = client.notes!.findIndex(
@@ -459,6 +476,7 @@ const ClientDetail = () => {
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => startEditing(originalIndex)}
+                                    aria-label="Editar nota"
                                   >
                                     <Edit className="h-3 w-3" />
                                   </Button>
@@ -478,18 +496,18 @@ const ClientDetail = () => {
                               )}
                             </div>
                           );
-                        })
-                    ) : (
-                      <div className="p-3 bg-muted rounded-lg border border-border">
-                        <span className="text-xs font-medium text-muted-foreground">
-                          {client.createdAt
-                            ? format(new Date(client.createdAt), 'dd/MM/yyyy HH:mm', { locale: es })
-                            : 'Fecha desconocida'}
-                        </span>
-                        <p className="text-sm mt-1 whitespace-pre-wrap">{client.notes}</p>
-                      </div>
-                    )}
-                  </div>
+                        })}
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-muted rounded-lg border border-border">
+                      <span className="text-xs font-medium text-muted-foreground">
+                        {client.createdAt
+                          ? format(new Date(client.createdAt), 'dd/MM/yyyy HH:mm', { locale: es })
+                          : 'Fecha desconocida'}
+                      </span>
+                      <p className="text-sm mt-1 whitespace-pre-wrap">{client.notes}</p>
+                    </div>
+                  )
                 ) : (
                   <p className="text-muted-foreground text-sm">No hay notas registradas.</p>
                 )}
