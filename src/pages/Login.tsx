@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
+import { FirebaseError } from 'firebase/app';
 import { Eye, EyeOff, TrendingUp } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { Button } from '@/components/ui/button';
@@ -9,13 +10,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 
 export const Login = () => {
-  const [email, setEmail] = useState('asesora@financiera.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  
-  const { isAuthenticated, login } = useAuthStore();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const { isAuthenticated, login, isLoading: authLoading } = useAuthStore();
   const { toast } = useToast();
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
+        <p className="text-muted-foreground">Verificando sesión...</p>
+      </div>
+    );
+  }
 
   if (isAuthenticated) {
     return <Navigate to="/" replace />;
@@ -23,30 +32,39 @@ export const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     try {
-      const success = await login(email, password);
-      if (success) {
-        toast({
-          title: "Acceso autorizado",
-          description: "Bienvenida al panel de administración",
-        });
-      } else {
-        toast({
-          title: "Error de autenticación",
-          description: "Credenciales inválidas. Intenta nuevamente.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
+      await login(email, password);
       toast({
-        title: "Error del sistema",
-        description: "Ocurrió un error inesperado. Intenta más tarde.",
-        variant: "destructive",
+        title: 'Acceso autorizado',
+        description: 'Bienvenida al panel de administración',
+      });
+    } catch (error) {
+      let description = 'Credenciales inválidas. Intenta nuevamente.';
+
+      if (error instanceof FirebaseError) {
+        switch (error.code) {
+          case 'auth/invalid-credential':
+          case 'auth/wrong-password':
+          case 'auth/user-not-found':
+            description = 'Email o contraseña incorrectos.';
+            break;
+          case 'auth/too-many-requests':
+            description = 'Demasiados intentos fallidos. Intenta más tarde.';
+            break;
+          default:
+            description = 'No pudimos iniciar sesión. Intenta nuevamente.';
+        }
+      }
+
+      toast({
+        title: 'Error de autenticación',
+        description,
+        variant: 'destructive',
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -62,7 +80,7 @@ export const Login = () => {
             <p className="text-muted-foreground">Panel Profesional de Gestión</p>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
@@ -76,11 +94,11 @@ export const Login = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="tu-email@empresa.com"
                 required
-                disabled={isLoading}
+                disabled={isSubmitting}
                 className="h-11"
               />
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="password" className="text-sm font-medium">
                 Contraseña
@@ -93,7 +111,7 @@ export const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Tu contraseña"
                   required
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                   className="h-11 pr-10"
                 />
                 <Button
@@ -102,7 +120,7 @@ export const Login = () => {
                   size="sm"
                   className="absolute right-0 top-0 h-11 px-3 hover:bg-transparent"
                   onClick={() => setShowPassword(!showPassword)}
-                  disabled={isLoading}
+                  disabled={isSubmitting}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4 text-muted-foreground" />
@@ -112,24 +130,18 @@ export const Login = () => {
                 </Button>
               </div>
             </div>
-            
+
             <Button
               type="submit"
               className="w-full h-11 font-medium"
-              disabled={isLoading}
+              disabled={isSubmitting}
             >
-              {isLoading ? 'Verificando...' : 'Iniciar Sesión'}
+              {isSubmitting ? 'Verificando...' : 'Iniciar Sesión'}
             </Button>
           </form>
-          
-          <div className="mt-6 p-4 bg-muted rounded-lg">
-            <p className="text-sm text-muted-foreground text-center mb-2">
-              <strong>Credenciales de demo:</strong>
-            </p>
-            <div className="text-xs text-muted-foreground space-y-1">
-              <p><strong>Email:</strong> asesora@financiera.com</p>
-              <p><strong>Contraseña:</strong> admin123</p>
-            </div>
+
+          <div className="mt-6 p-4 bg-muted rounded-lg text-sm text-muted-foreground text-center">
+            Ingresa con las credenciales configuradas en Firebase Authentication.
           </div>
         </CardContent>
       </Card>

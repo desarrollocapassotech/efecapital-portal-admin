@@ -13,6 +13,14 @@ export interface Client {
   createdAt: Date;
 }
 
+export interface Broker {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  notes?: string;
+}
+
 export interface Note {
   text: string;
   date: string; 
@@ -60,6 +68,7 @@ export interface Notification {
 export interface AuthState {
   isAuthenticated: boolean;
   user: {
+    uid: string;
     name: string;
     email: string;
     role: 'advisor';
