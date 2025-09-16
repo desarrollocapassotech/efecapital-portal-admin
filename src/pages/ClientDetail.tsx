@@ -74,32 +74,36 @@ const ClientDetail = () => {
     .filter((a) => a.clientId === id)
     .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!newMessage.trim() && attachments.length === 0) return;
 
-    if (newMessage.trim()) {
-      addMessage({
-        clientId: id!,
-        content: newMessage,
-        timestamp: new Date(),
-        isFromAdvisor: true,
-        status: 'respondido',
-      });
+    try {
+      if (newMessage.trim()) {
+        await addMessage({
+          clientId: id!,
+          content: newMessage,
+          timestamp: new Date(),
+          isFromAdvisor: true,
+          status: 'respondido',
+        });
+      }
+
+      for (const file of attachments) {
+        const content = `[${file.type.startsWith('image/') ? 'Imagen' : 'PDF'}: ${file.name}]`;
+        await addMessage({
+          clientId: id!,
+          content,
+          timestamp: new Date(),
+          isFromAdvisor: true,
+          status: 'respondido',
+        });
+      }
+
+      setNewMessage('');
+      setAttachments([]);
+    } catch (error) {
+      console.error('Error al enviar el mensaje', error);
     }
-
-    attachments.forEach((file) => {
-      const content = `[${file.type.startsWith('image/') ? 'Imagen' : 'PDF'}: ${file.name}]`;
-      addMessage({
-        clientId: id!,
-        content,
-        timestamp: new Date(),
-        isFromAdvisor: true,
-        status: 'respondido',
-      });
-    });
-
-    setNewMessage('');
-    setAttachments([]);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -112,7 +116,7 @@ const ClientDetail = () => {
     setAttachments(attachments.filter((_, i) => i !== index));
   };
 
-  const handleUpdateNotes = () => {
+  const handleUpdateNotes = async () => {
     if (!newNote.trim()) return;
 
     const updatedNotes = [
@@ -123,8 +127,12 @@ const ClientDetail = () => {
       },
     ];
 
-    updateClient(id!, { notes: updatedNotes });
-    setNewNote('');
+    try {
+      await updateClient(id!, { notes: updatedNotes });
+      setNewNote('');
+    } catch (error) {
+      console.error('Error al actualizar las notas', error);
+    }
   };
 
   const startEditing = (index: number) => {
@@ -140,7 +148,7 @@ const ClientDetail = () => {
     setEditingNoteText('');
   };
 
-  const saveEdit = () => {
+  const saveEdit = async () => {
     if (editingNoteIndex === null || !editingNoteText.trim() || !client.notes || !Array.isArray(client.notes)) return;
 
     const updatedNotes = [...client.notes];
@@ -149,9 +157,13 @@ const ClientDetail = () => {
       text: editingNoteText.trim(),
     };
 
-    updateClient(id!, { notes: updatedNotes });
-    setEditingNoteIndex(null);
-    setEditingNoteText('');
+    try {
+      await updateClient(id!, { notes: updatedNotes });
+      setEditingNoteIndex(null);
+      setEditingNoteText('');
+    } catch (error) {
+      console.error('Error al guardar la nota', error);
+    }
   };
 
   const getTipoInversorColor = (tipo: string) => {

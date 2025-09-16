@@ -31,6 +31,25 @@ export const Sidebar = () => {
   const unreadNotifications = notifications.filter((n) => !n.read).length;
   const pendingMessages = messages.filter((m) => m.status === 'pendiente' && !m.isFromAdvisor).length;
 
+  const displayName = user?.name || user?.email || 'Usuario';
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0]?.toUpperCase())
+    .join('')
+    .slice(0, 2) || 'FA';
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('Error al cerrar sesión', error);
+    } finally {
+      setIsSidebarOpen(false);
+    }
+  };
+
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
     return location.pathname.startsWith(path);
@@ -103,12 +122,12 @@ export const Sidebar = () => {
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
                 <span className="text-sm font-medium text-primary-foreground">
-                  {user?.name.split(' ').map((n) => n[0]).join('')}
+                  {initials}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{user?.name}</p>
-                <p className="text-xs text-muted-foreground">Asesora Financiera</p>
+                <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
+                <p className="text-xs text-muted-foreground">{user?.email}</p>
               </div>
             </div>
           </div>
@@ -154,10 +173,7 @@ export const Sidebar = () => {
             <Button
               variant="ghost"
               className="w-full justify-start text-muted-foreground hover:text-foreground"
-              onClick={() => {
-                logout();
-                setIsSidebarOpen(false);
-              }}
+              onClick={handleLogout}
             >
               <LogOut className="h-5 w-5 mr-3" />
               Cerrar Sesión

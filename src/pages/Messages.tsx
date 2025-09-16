@@ -9,7 +9,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export const Messages = () => {
-  const { messages, clients, updateMessageStatus } = useDataStore();
+  const { messages, clients } = useDataStore();
   const [searchTerm, setSearchTerm] = useState('');
 
   // Filtrar clientes que tengan mensajes y coincidan con el término de búsqueda

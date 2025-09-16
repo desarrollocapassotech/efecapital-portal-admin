@@ -3,7 +3,15 @@ import { useAuthStore } from '@/stores/authStore';
 import { Sidebar } from '@/components/Sidebar';
 
 export const Layout = () => {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuthStore();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <span className="text-muted-foreground">Verificando sesión...</span>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

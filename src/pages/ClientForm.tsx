@@ -10,33 +10,45 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
+type FormState = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  investorProfile: 'conservador' | 'moderado' | 'agresivo';
+  objectives: string;
+  investmentHorizon: string;
+  broker: string;
+  notes: string;
+};
+
 export const ClientForm = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { clients, addClient, updateClient } = useDataStore();
+  const { clients, addClient, updateClient, brokers } = useDataStore();
   const { toast } = useToast();
 
   const isEditing = id && id !== 'new';
   const existingClient = isEditing ? clients.find(c => c.id === id) : null;
 
-  const [formData, setFormData] = useState({
-    firstName: existingClient?.firstName || '',
-    lastName: existingClient?.lastName || '',
-    email: existingClient?.email || '',
-    phone: existingClient?.phone || '',
-    investorProfile: existingClient?.investorProfile || 'moderado' as const,
-    objectives: existingClient?.objectives || '',
-    investmentHorizon: existingClient?.investmentHorizon || '',
-    broker: existingClient?.broker || '',
-    notes: existingClient?.notes || ''
+  const [formData, setFormData] = useState<FormState>({
+    firstName: existingClient?.firstName ?? '',
+    lastName: existingClient?.lastName ?? '',
+    email: existingClient?.email ?? '',
+    phone: existingClient?.phone ?? '',
+    investorProfile: existingClient?.investorProfile ?? 'moderado',
+    objectives: existingClient?.objectives ?? '',
+    investmentHorizon: existingClient?.investmentHorizon ?? '',
+    broker: existingClient?.broker ?? '',
+    notes: '',
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = <K extends keyof FormState>(field: K, value: FormState[K]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+    if (errors[field as string]) {
+      setErrors(prev => ({ ...prev, [field as string]: '' }));
     }
   };
 
@@ -64,9 +76,9 @@ export const ClientForm = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       toast({
         title: "Error de validación",
@@ -77,15 +89,46 @@ export const ClientForm = () => {
     }
 
     try {
+      const noteEntries = formData.notes.trim()
+        ? [
+            ...(existingClient?.notes ?? []),
+            {
+              text: formData.notes.trim(),
+              date: new Date().toISOString(),
+            },
+          ]
+        : existingClient?.notes;
+
+      const baseData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        investorProfile: formData.investorProfile,
+        objectives: formData.objectives,
+        investmentHorizon: formData.investmentHorizon,
+        broker: formData.broker,
+      };
+
       if (isEditing) {
-        updateClient(id, formData);
+        const updatePayload = {
+          ...baseData,
+          ...(noteEntries ? { notes: noteEntries } : {}),
+        };
+
+        await updateClient(id, updatePayload);
         toast({
           title: "Cliente actualizado",
           description: "La información del cliente ha sido actualizada exitosamente"
         });
       } else {
-        addClient({
-          ...formData,
+        const notesForNewClient = formData.notes.trim()
+          ? [{ text: formData.notes.trim(), date: new Date().toISOString() }]
+          : [];
+
+        await addClient({
+          ...baseData,
+          notes: notesForNewClient,
           lastContact: new Date()
         });
         toast({
@@ -200,9 +243,11 @@ export const ClientForm = () => {
             <CardContent className="space-y-4">
               <div>
                 <Label htmlFor="investorProfile">Perfil de Inversor *</Label>
-                <Select 
-                  value={formData.investorProfile} 
-                  onValueChange={(value) => handleChange('investorProfile', value)}
+                <Select
+                  value={formData.investorProfile}
+                  onValueChange={(value) =>
+                    handleChange('investorProfile', value as FormState['investorProfile'])
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -223,7 +268,13 @@ export const ClientForm = () => {
                   onChange={(e) => handleChange('broker', e.target.value)}
                   placeholder="Ej: Banco Galicia, Invertir Online"
                   className={errors.broker ? 'border-destructive' : ''}
+                  list="brokers-list"
                 />
+                <datalist id="brokers-list">
+                  {brokers.map((broker) => (
+                    <option key={broker.id} value={broker.name} />
+                  ))}
+                </datalist>
                 {errors.broker && (
                   <p className="text-sm text-destructive mt-1">{errors.broker}</p>
                 )}

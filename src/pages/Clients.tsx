@@ -52,8 +52,12 @@ export const Clients = () => {
     client.investorProfile.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleDeleteClient = (clientId: string) => {
-    deleteClient(clientId);
+  const handleDeleteClient = async (clientId: string) => {
+    try {
+      await deleteClient(clientId);
+    } catch (error) {
+      console.error('Error al eliminar cliente', error);
+    }
   };
 
   const getProfileColor = (profile: string) => {
