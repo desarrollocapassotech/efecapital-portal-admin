@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save } from 'lucide-react';
+import { ArrowLeft, Save, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,11 +15,213 @@ type FormState = {
   lastName: string;
   email: string;
   phone: string;
-  investorProfile: 'conservador' | 'moderado' | 'agresivo';
+  investorProfile: 'Conservador' | 'Moderado' | 'Agresivo';
   objectives: string;
   investmentHorizon: string;
   broker: string;
   notes: string;
+};
+
+// Componente RichTextEditor solo para objetivos
+const RichTextEditor = ({ 
+  value, 
+  onChange, 
+  placeholder, 
+  error, 
+  id 
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  error?: string;
+  id: string;
+}) => {
+  const editorRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.contentEditable = 'true';
+      editorRef.current.style.minHeight = '120px';
+      editorRef.current.style.padding = '12px';
+      editorRef.current.style.outline = 'none';
+      editorRef.current.style.fontSize = '14px';
+      editorRef.current.style.lineHeight = '1.5';
+      
+      if (value) {
+        editorRef.current.innerHTML = value;
+      } else {
+        editorRef.current.innerHTML = `<p style="color: #94a3b8; margin: 0;">${placeholder}</p>`;
+      }
+
+      editorRef.current.addEventListener('focus', handleFocus);
+      editorRef.current.addEventListener('blur', handleBlur);
+      editorRef.current.addEventListener('input', handleInput);
+    }
+
+    return () => {
+      if (editorRef.current) {
+        editorRef.current.removeEventListener('focus', handleFocus);
+        editorRef.current.removeEventListener('blur', handleBlur);
+        editorRef.current.removeEventListener('input', handleInput);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (editorRef.current && value !== undefined) {
+      const currentContent = editorRef.current.innerHTML;
+      if (value && value !== currentContent) {
+        editorRef.current.innerHTML = value;
+      } else if (!value && !editorRef.current.textContent?.trim()) {
+        editorRef.current.innerHTML = `<p style="color: #94a3b8; margin: 0;">${placeholder}</p>`;
+      }
+    }
+  }, [value, placeholder]);
+
+  const handleFocus = () => {
+    if (editorRef.current && !value) {
+      editorRef.current.innerHTML = '<p></p>';
+      const range = document.createRange();
+      const sel = window.getSelection();
+      if (editorRef.current.firstChild) {
+        range.setStart(editorRef.current.firstChild, 0);
+        range.collapse(true);
+        sel?.removeAllRanges();
+        sel?.addRange(range);
+      }
+    }
+  };
+
+  const handleBlur = () => {
+    if (editorRef.current && !editorRef.current.textContent?.trim()) {
+      editorRef.current.innerHTML = `<p style="color: #94a3b8; margin: 0;">${placeholder}</p>`;
+      onChange('');
+    }
+  };
+
+  const handleInput = () => {
+    if (editorRef.current) {
+      const content = editorRef.current.innerHTML;
+      const textContent = editorRef.current.textContent || '';
+      
+      if (textContent.trim()) {
+        onChange(content);
+      } else {
+        onChange('');
+      }
+    }
+  };
+
+  const executeCommand = (command: string, value: string | null = null) => {
+    document.execCommand(command, false, value || undefined);
+    editorRef.current?.focus();
+  };
+
+  const isCommandActive = (command: string) => {
+    return document.queryCommandState(command);
+  };
+
+  const ToolbarButton = ({ 
+    command, 
+    icon: Icon, 
+    title, 
+    value: commandValue = null 
+  }: {
+    command: string;
+    icon: React.ComponentType<{ className?: string }>;
+    title: string;
+    value?: string | null;
+  }) => {
+    const isActive = isCommandActive(command);
+    
+    return (
+      <Button
+        type="button"
+        variant={isActive ? "default" : "outline"}
+        size="sm"
+        onClick={() => executeCommand(command, commandValue)}
+        title={title}
+        className="h-8 w-8 p-0"
+      >
+        <Icon className="h-4 w-4" />
+      </Button>
+    );
+  };
+
+  const insertList = (ordered = false) => {
+    const command = ordered ? 'insertOrderedList' : 'insertUnorderedList';
+    executeCommand(command);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex flex-wrap gap-1 p-2 border border-gray-200 rounded-t-md bg-gray-50">
+        <ToolbarButton command="bold" icon={Bold} title="Negrita (Ctrl+B)" />
+        <ToolbarButton command="italic" icon={Italic} title="Cursiva (Ctrl+I)" />
+        <ToolbarButton command="underline" icon={Underline} title="Subrayado (Ctrl+U)" />
+        
+        <div className="w-px h-6 bg-gray-300 mx-1" />
+        
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => insertList(false)}
+          title="Lista con viñetas"
+          className="h-8 w-8 p-0"
+        >
+          <List className="h-4 w-4" />
+        </Button>
+        
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => insertList(true)}
+          title="Lista numerada"
+          className="h-8 w-8 p-0"
+        >
+          <ListOrdered className="h-4 w-4" />
+        </Button>
+        
+        <div className="w-px h-6 bg-gray-300 mx-1" />
+        
+        <ToolbarButton command="justifyLeft" icon={AlignLeft} title="Alinear a la izquierda" />
+        <ToolbarButton command="justifyCenter" icon={AlignCenter} title="Centrar" />
+        <ToolbarButton command="justifyRight" icon={AlignRight} title="Alinear a la derecha" />
+        
+        <div className="w-px h-6 bg-gray-300 mx-1" />
+        
+        <select
+          onChange={(e) => executeCommand('fontSize', e.target.value)}
+          className="h-8 text-sm border border-gray-300 rounded px-2 bg-white"
+          title="Tamaño de fuente"
+        >
+          <option value="2">Pequeño</option>
+          <option value="3">Normal</option>
+          <option value="4">Grande</option>
+          <option value="5">Muy Grande</option>
+        </select>
+      </div>
+
+      <div
+        ref={editorRef}
+        id={id}
+        className={`border border-t-0 rounded-b-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+          error ? 'border-red-500' : 'border-gray-200'
+        }`}
+        style={{
+          minHeight: '120px',
+          maxHeight: '300px',
+          overflowY: 'auto'
+        }}
+      />
+      
+      {error && (
+        <p className="text-sm text-red-600 mt-1">{error}</p>
+      )}
+    </div>
+  );
 };
 
 export const ClientForm = () => {
@@ -36,7 +238,7 @@ export const ClientForm = () => {
     lastName: existingClient?.lastName ?? '',
     email: existingClient?.email ?? '',
     phone: existingClient?.phone ?? '',
-    investorProfile: existingClient?.investorProfile ?? 'moderado',
+    investorProfile: existingClient?.investorProfile ?? 'Moderado',
     objectives: existingClient?.objectives ?? '',
     investmentHorizon: existingClient?.investmentHorizon ?? '',
     broker: existingClient?.broker ?? '',
@@ -304,17 +506,13 @@ export const ClientForm = () => {
           </CardHeader>
           <CardContent>
             <Label htmlFor="objectives">Objetivos *</Label>
-            <Textarea
+            <RichTextEditor
               id="objectives"
               value={formData.objectives}
-              onChange={(e) => handleChange('objectives', e.target.value)}
+              onChange={(value) => handleChange('objectives', value)}
               placeholder="Describe los objetivos financieros del cliente..."
-              rows={3}
-              className={errors.objectives ? 'border-destructive' : ''}
+              error={errors.objectives}
             />
-            {errors.objectives && (
-              <p className="text-sm text-destructive mt-1">{errors.objectives}</p>
-            )}
           </CardContent>
         </Card>
 

@@ -50,7 +50,7 @@ const normalizeNotes = (value: unknown): Note[] => {
   return value
     .filter((note) => note && typeof note === 'object')
     .map((note) => {
-      const noteRecord = note as Partial<Note> & { date?: unknown };
+      const noteRecord = note as Partial<Note> & { date?: any };
       const text = typeof noteRecord.text === 'string' ? noteRecord.text : '';
       const dateValue = noteRecord.date instanceof Timestamp
         ? noteRecord.date.toDate().toISOString()
@@ -129,7 +129,7 @@ export const useDataStore = create<DataStore>((set, get) => {
               lastName: data.lastName ?? '',
               email: data.email ?? '',
               phone: data.phone ?? '',
-              investorProfile: data.investorProfile ?? 'moderado',
+              investorProfile: data.investorProfile ?? 'Moderado',
               objectives: data.objectives ?? '',
               investmentHorizon: data.investmentHorizon ?? '',
               broker: data.broker ?? '',

@@ -168,11 +168,11 @@ const ClientDetail = () => {
 
   const getTipoInversorColor = (tipo: string) => {
     switch (tipo) {
-      case 'conservador':
+      case 'Conservador':
         return 'bg-blue-100 text-blue-800';
-      case 'moderado':
+      case 'Moderado':
         return 'bg-green-100 text-green-800';
-      case 'agresivo':
+      case 'Agresivo':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';

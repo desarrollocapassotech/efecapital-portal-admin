@@ -4,7 +4,7 @@ export interface Client {
   lastName: string;
   email: string;
   phone: string;
-  investorProfile: 'conservador' | 'moderado' | 'agresivo';
+  investorProfile: 'Conservador' | 'Moderado' | 'Agresivo';
   objectives: string;
   investmentHorizon: string;
   broker: string;
