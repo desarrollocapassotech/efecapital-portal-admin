@@ -239,8 +239,13 @@ const ClientDetail = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground leading-relaxed">{user.objetivos}</p>
-          </CardContent>
+          <div
+            className="text-muted-foreground leading-relaxed prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{
+              __html: user?.objetivos || "Comparte tus objetivos financieros con tu asesora para recibir recomendaciones personalizadas."
+            }}
+          />
+        </CardContent>
         </Card>
 
         <Card>
@@ -270,7 +275,7 @@ const ClientDetail = () => {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <MessageCircle className="h-5 w-5" />
-                Centro de Comunicaciones
+                Mensajes
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 flex flex-col space-y-4 min-h-0">
