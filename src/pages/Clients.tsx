@@ -179,6 +179,15 @@ export const Clients = () => {
                         <Button
                           variant="outline"
                           size="sm"
+                          onClick={() => navigate(`/messages/${client.id}`)}
+                          className="gap-1"
+                        >
+                          <MessageCircle className="h-4 w-4" />
+                          Chat
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => navigate(`/clients/${client.id}`)}
                         >
                           Ver
@@ -302,6 +311,15 @@ export const Clients = () => {
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/messages/${client.id}`)}
+                              className="gap-1"
+                            >
+                              <MessageCircle className="h-4 w-4" />
+                              Chat
+                            </Button>
                             <Button
                               variant="outline"
                               size="sm"
