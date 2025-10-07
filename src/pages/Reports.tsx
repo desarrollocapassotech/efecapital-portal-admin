@@ -113,6 +113,15 @@ export const Reports = () => {
       return;
     }
 
+    if (!selectedFile) {
+      toast({
+        title: 'Adjunta un archivo',
+        description: 'Selecciona el documento que quieres compartir con tus clientes.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     if (visibility === 'selected' && selectedClients.length === 0) {
       toast({
         title: 'Selecciona al menos un cliente',
@@ -124,14 +133,13 @@ export const Reports = () => {
 
     setIsSubmitting(true);
     try {
-      addDocument({
-        name: name.trim(),
-        description: description.trim(),
+      await addDocument({
+        name,
+        description,
         type,
-        uploadDate: new Date(),
-        size: selectedFile?.size ?? 0,
         visibility,
         clientIds: visibility === 'selected' ? selectedClients : [],
+        file: selectedFile,
       });
 
       toast({
@@ -143,8 +151,32 @@ export const Reports = () => {
       });
 
       resetForm();
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'No pudimos compartir el informe',
+        description: 'Intenta nuevamente. Si el problema persiste contacta al administrador.',
+        variant: 'destructive',
+      });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async (documentId: string) => {
+    try {
+      await deleteDocument(documentId);
+      toast({
+        title: 'Informe eliminado',
+        description: 'El informe y su archivo fueron eliminados correctamente.',
+      });
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: 'No pudimos eliminar el informe',
+        description: 'Vuelve a intentarlo en unos segundos.',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -419,7 +451,14 @@ export const Reports = () => {
                       <TableRow key={document.id}>
                         <TableCell>
                           <div className="space-y-1">
-                            <p className="font-medium">{document.name}</p>
+                            <a
+                              href={document.fileUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="font-medium text-primary hover:underline"
+                            >
+                              {document.name}
+                            </a>
                             {document.description && (
                               <p className="text-sm text-muted-foreground line-clamp-2">
                                 {document.description}
@@ -448,7 +487,7 @@ export const Reports = () => {
                             variant="ghost"
                             size="sm"
                             className="text-destructive hover:text-destructive"
-                            onClick={() => deleteDocument(document.id)}
+                            onClick={() => void handleDelete(document.id)}
                           >
                             <Trash2 className="h-4 w-4" />
                             <span className="sr-only">Eliminar informe</span>

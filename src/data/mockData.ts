@@ -150,6 +150,8 @@ export const mockDocuments: Document[] = [
     description: 'Análisis detallado de performance de cartera enero 2024',
     uploadDate: new Date('2024-01-18T15:30:00'),
     size: 2048576,
+    fileUrl: '#',
+    storagePath: 'mock/reporte-performance-enero-2024.pdf',
     visibility: 'selected',
     clientIds: ['1']
   },
@@ -160,6 +162,8 @@ export const mockDocuments: Document[] = [
     description: 'Sugerencias de ajuste para perfil agresivo',
     uploadDate: new Date('2024-01-17T11:00:00'),
     size: 1536000,
+    fileUrl: '#',
+    storagePath: 'mock/recomendaciones-portfolio-agresivo.pdf',
     visibility: 'selected',
     clientIds: ['2']
   },
@@ -170,6 +174,8 @@ export const mockDocuments: Document[] = [
     description: 'Análisis semanal de condiciones del mercado',
     uploadDate: new Date('2024-01-16T09:45:00'),
     size: 3072000,
+    fileUrl: '#',
+    storagePath: 'mock/informe-mercado-semanal.pdf',
     visibility: 'all',
     clientIds: []
   },
@@ -180,6 +186,8 @@ export const mockDocuments: Document[] = [
     description: 'Plan de inversión conservador para 2024',
     uploadDate: new Date('2024-01-15T14:20:00'),
     size: 2560000,
+    fileUrl: '#',
+    storagePath: 'mock/estrategia-conservadora-2024.pdf',
     visibility: 'selected',
     clientIds: ['4']
   }

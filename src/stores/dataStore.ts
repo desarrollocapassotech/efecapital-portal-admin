@@ -15,7 +15,8 @@ import {
   where,
   writeBatch,
 } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, storage } from '@/lib/firebase';
+import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import {
   Activity,
   Broker,
@@ -65,6 +66,15 @@ const normalizeNotes = (value: unknown): Note[] => {
     });
 };
 
+interface AddDocumentInput {
+  name: string;
+  description: string;
+  type: Document['type'];
+  visibility: Document['visibility'];
+  clientIds: string[];
+  file: File;
+}
+
 interface DataStore {
   clients: Client[];
   brokers: Broker[];
@@ -86,8 +96,8 @@ interface DataStore {
   markMessageAsRead: (id: string) => Promise<void>;
   markClientMessagesAsRead: (clientId: string) => Promise<void>;
 
-  addDocument: (document: Omit<Document, 'id'>) => void;
-  deleteDocument: (id: string) => void;
+  addDocument: (document: AddDocumentInput) => Promise<void>;
+  deleteDocument: (id: string) => Promise<void>;
 
   addActivity: (activity: Omit<Activity, 'id'>) => void;
 
@@ -99,6 +109,7 @@ export const useDataStore = create<DataStore>((set, get) => {
   let clientsUnsubscribe: Unsubscribe | null = null;
   let messagesUnsubscribe: Unsubscribe | null = null;
   let brokersUnsubscribe: Unsubscribe | null = null;
+  let documentsUnsubscribe: Unsubscribe | null = null;
 
   return {
     clients: [],
@@ -200,6 +211,40 @@ export const useDataStore = create<DataStore>((set, get) => {
           set({ brokers });
         });
       }
+
+      if (!documentsUnsubscribe) {
+        const documentsQuery = query(
+          collection(db, 'documents'),
+          orderBy('uploadDate', 'desc')
+        );
+
+        documentsUnsubscribe = onSnapshot(documentsQuery, (snapshot) => {
+          const documents = snapshot.docs.map((docSnapshot) => {
+            const data = docSnapshot.data();
+            const rawClientIds = Array.isArray(data.clientIds)
+              ? (data.clientIds as string[])
+              : [];
+
+            return {
+              id: docSnapshot.id,
+              name: data.name ?? '',
+              description: data.description ?? '',
+              type: (data.type ?? 'informe_mercado') as Document['type'],
+              uploadDate: toDate(data.uploadDate),
+              size: typeof data.size === 'number' ? data.size : 0,
+              fileUrl: data.fileUrl ?? '',
+              storagePath: data.storagePath ?? '',
+              visibility: (data.visibility ?? 'all') as Document['visibility'],
+              clientIds:
+                data.visibility === 'selected'
+                  ? Array.from(new Set(rawClientIds))
+                  : [],
+            } satisfies Document;
+          });
+
+          set({ documents });
+        });
+      }
     },
 
     stopDataListeners: () => {
@@ -214,6 +259,10 @@ export const useDataStore = create<DataStore>((set, get) => {
       if (brokersUnsubscribe) {
         brokersUnsubscribe();
         brokersUnsubscribe = null;
+      }
+      if (documentsUnsubscribe) {
+        documentsUnsubscribe();
+        documentsUnsubscribe = null;
       }
 
       set({
@@ -438,46 +487,94 @@ export const useDataStore = create<DataStore>((set, get) => {
       await batch.commit();
     },
 
-    addDocument: (documentData) => {
+    addDocument: async (documentData) => {
       const normalizedClientIds =
         documentData.visibility === 'selected'
           ? Array.from(new Set(documentData.clientIds))
           : [];
 
-      const newDocument: Document = {
-        ...documentData,
-        clientIds: normalizedClientIds,
-        id: Math.random().toString(36).substr(2, 9),
-      };
+      const uploadDate = new Date();
+      const storagePath = `reports/${Date.now()}-${documentData.file.name}`;
+      const storageRef = ref(storage, storagePath);
 
-      set((state) => ({ documents: [...state.documents, newDocument] }));
+      await uploadBytes(storageRef, documentData.file);
+      const fileUrl = await getDownloadURL(storageRef);
 
-      const targetClients =
-        newDocument.visibility === 'all'
-          ? get().clients
-          : get().clients.filter((client) => newDocument.clientIds.includes(client.id));
-
-      targetClients.forEach((client) => {
-        get().addActivity({
-          clientId: client.id,
-          type: 'documento',
-          title: 'Documento subido',
-          description: newDocument.name,
-          timestamp: newDocument.uploadDate,
+      try {
+        const docRef = await addDoc(collection(db, 'documents'), {
+          name: documentData.name.trim(),
+          description: documentData.description.trim(),
+          type: documentData.type,
+          size: documentData.file.size,
+          visibility: documentData.visibility,
+          clientIds: normalizedClientIds,
+          fileUrl,
+          storagePath,
+          uploadDate: serverTimestamp(),
         });
 
-        get().addNotification({
-          title: `Nuevo informe: ${newDocument.name}`,
-          message: newDocument.description,
-          timestamp: newDocument.uploadDate,
-          read: false,
-          type: 'informe',
-          clientId: client.id,
+        const newDocument: Document = {
+          id: docRef.id,
+          name: documentData.name.trim(),
+          description: documentData.description.trim(),
+          type: documentData.type,
+          uploadDate,
+          size: documentData.file.size,
+          fileUrl,
+          storagePath,
+          visibility: documentData.visibility,
+          clientIds: normalizedClientIds,
+        };
+
+        set((state) => ({
+          documents: [
+            ...state.documents.filter((doc) => doc.id !== newDocument.id),
+            newDocument,
+          ],
+        }));
+
+        const targetClients =
+          newDocument.visibility === 'all'
+            ? get().clients
+            : get().clients.filter((client) =>
+                newDocument.clientIds.includes(client.id)
+              );
+
+        targetClients.forEach((client) => {
+          get().addActivity({
+            clientId: client.id,
+            type: 'documento',
+            title: 'Documento subido',
+            description: newDocument.name,
+            timestamp: uploadDate,
+          });
+
+          get().addNotification({
+            title: `Nuevo informe: ${newDocument.name}`,
+            message: newDocument.description,
+            timestamp: uploadDate,
+            read: false,
+            type: 'informe',
+            clientId: client.id,
+          });
         });
-      });
+      } catch (error) {
+        await deleteObject(storageRef).catch(() => undefined);
+        throw error;
+      }
     },
 
-    deleteDocument: (id) => {
+    deleteDocument: async (id) => {
+      const existingDocument = get().documents.find((doc) => doc.id === id);
+
+      await deleteDoc(doc(db, 'documents', id));
+
+      if (existingDocument?.storagePath) {
+        await deleteObject(ref(storage, existingDocument.storagePath)).catch(
+          () => undefined
+        );
+      }
+
       set((state) => ({
         documents: state.documents.filter((doc) => doc.id !== id),
       }));
