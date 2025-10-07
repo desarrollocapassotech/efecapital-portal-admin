@@ -23,20 +23,27 @@ type FormState = {
 };
 
 // Componente RichTextEditor solo para objetivos
-const RichTextEditor = ({ 
-  value, 
-  onChange, 
-  placeholder, 
-  error, 
-  id 
+const RichTextEditor = ({
+  value,
+  onChange,
+  placeholder,
+  error,
+  id,
+  onFieldBlur
 }: {
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
   error?: string;
   id: string;
+  onFieldBlur?: () => void;
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
+  const blurCallbackRef = useRef(onFieldBlur);
+
+  useEffect(() => {
+    blurCallbackRef.current = onFieldBlur;
+  }, [onFieldBlur]);
 
   useEffect(() => {
     if (editorRef.current) {
@@ -54,14 +61,14 @@ const RichTextEditor = ({
       }
 
       editorRef.current.addEventListener('focus', handleFocus);
-      editorRef.current.addEventListener('blur', handleBlur);
+      editorRef.current.addEventListener('blur', handleEditorBlur);
       editorRef.current.addEventListener('input', handleInput);
     }
 
     return () => {
       if (editorRef.current) {
         editorRef.current.removeEventListener('focus', handleFocus);
-        editorRef.current.removeEventListener('blur', handleBlur);
+        editorRef.current.removeEventListener('blur', handleEditorBlur);
         editorRef.current.removeEventListener('input', handleInput);
       }
     };
@@ -92,11 +99,12 @@ const RichTextEditor = ({
     }
   };
 
-  const handleBlur = () => {
+  const handleEditorBlur = () => {
     if (editorRef.current && !editorRef.current.textContent?.trim()) {
       editorRef.current.innerHTML = `<p style="color: #94a3b8; margin: 0;">${placeholder}</p>`;
       onChange('');
     }
+    blurCallbackRef.current?.();
   };
 
   const handleInput = () => {
@@ -245,33 +253,95 @@ export const ClientForm = () => {
     notes: '',
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [touchedFields, setTouchedFields] = useState<Partial<Record<keyof FormState, boolean>>>({});
 
-  const handleChange = <K extends keyof FormState>(field: K, value: FormState[K]) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    if (errors[field as string]) {
-      setErrors(prev => ({ ...prev, [field as string]: '' }));
+  const validateField = (field: keyof FormState, value: FormState[keyof FormState]) => {
+    switch (field) {
+      case 'firstName':
+        return value.trim() ? '' : 'El nombre es requerido';
+      case 'lastName':
+        return value.trim() ? '' : 'El apellido es requerido';
+      case 'email': {
+        const trimmedEmail = value.trim();
+        if (!trimmedEmail) return 'El email es requerido';
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(trimmedEmail)) return 'El email no es válido';
+        const duplicateEmail = clients.find(c =>
+          c.email === trimmedEmail && (!isEditing || c.id !== id)
+        );
+        if (duplicateEmail) {
+          return 'Ya existe un cliente con este email';
+        }
+        return '';
+      }
+      case 'phone': {
+        const trimmedPhone = value.trim();
+        if (!trimmedPhone) return 'El teléfono es requerido';
+        const phoneRegex = /^\+?[0-9\s()-]{7,20}$/;
+        return phoneRegex.test(trimmedPhone)
+          ? ''
+          : 'Utiliza un formato válido (ej: +54 11 1234-5678)';
+      }
+      case 'objectives': {
+        const plainText = value
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .trim();
+        return plainText ? '' : 'Los objetivos son requeridos';
+      }
+      case 'investmentHorizon':
+        return value.trim() ? '' : 'El horizonte de inversión es requerido';
+      case 'broker':
+        return value.trim() ? '' : 'El broker es requerido';
+      default:
+        return '';
     }
   };
 
+  const handleChange = <K extends keyof FormState>(field: K, value: FormState[K]) => {
+    setFormData(prev => ({ ...prev, [field]: value }));
+
+    if (touchedFields[field] || errors[field]) {
+      const errorMessage = validateField(field, value);
+      setErrors(prev => ({ ...prev, [field]: errorMessage }));
+    }
+  };
+
+  const handleBlur = <K extends keyof FormState>(field: K) => {
+    setTouchedFields(prev => ({ ...prev, [field]: true }));
+    const errorMessage = validateField(field, formData[field]);
+    setErrors(prev => ({ ...prev, [field]: errorMessage }));
+  };
+
   const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+    const fieldsToValidate: Array<keyof FormState> = [
+      'firstName',
+      'lastName',
+      'email',
+      'phone',
+      'objectives',
+      'investmentHorizon',
+      'broker'
+    ];
 
-    if (!formData.firstName.trim()) newErrors.firstName = 'El nombre es requerido';
-    if (!formData.lastName.trim()) newErrors.lastName = 'El apellido es requerido';
-    if (!formData.email.trim()) newErrors.email = 'El email es requerido';
-    if (!formData.email.includes('@')) newErrors.email = 'El email no es válido';
-    if (!formData.phone.trim()) newErrors.phone = 'El teléfono es requerido';
-    if (!formData.objectives.trim()) newErrors.objectives = 'Los objetivos son requeridos';
-    if (!formData.investmentHorizon.trim()) newErrors.investmentHorizon = 'El horizonte de inversión es requerido';
-    if (!formData.broker.trim()) newErrors.broker = 'El broker es requerido';
+    const newErrors: Partial<Record<keyof FormState, string>> = {};
 
-    // Check for duplicate email (only for new clients or different email)
-    const duplicateEmail = clients.find(c => 
-      c.email === formData.email && (!isEditing || c.id !== id)
-    );
-    if (duplicateEmail) {
-      newErrors.email = 'Ya existe un cliente con este email';
+    fieldsToValidate.forEach(field => {
+      const errorMessage = validateField(field, formData[field]);
+      if (errorMessage) {
+        newErrors[field] = errorMessage;
+      }
+    });
+
+    if (Object.keys(newErrors).length > 0) {
+      setTouchedFields(prev => ({
+        ...prev,
+        ...fieldsToValidate.reduce(
+          (acc, field) => ({ ...acc, [field]: true }),
+          {} as Partial<Record<keyof FormState, boolean>>
+        )
+      }));
     }
 
     setErrors(newErrors);
@@ -384,6 +454,7 @@ export const ClientForm = () => {
                     id="firstName"
                     value={formData.firstName}
                     onChange={(e) => handleChange('firstName', e.target.value)}
+                    onBlur={() => handleBlur('firstName')}
                     placeholder="Juan"
                     className={errors.firstName ? 'border-destructive' : ''}
                   />
@@ -397,6 +468,7 @@ export const ClientForm = () => {
                     id="lastName"
                     value={formData.lastName}
                     onChange={(e) => handleChange('lastName', e.target.value)}
+                    onBlur={() => handleBlur('lastName')}
                     placeholder="Pérez"
                     className={errors.lastName ? 'border-destructive' : ''}
                   />
@@ -413,6 +485,7 @@ export const ClientForm = () => {
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleChange('email', e.target.value)}
+                  onBlur={() => handleBlur('email')}
                   placeholder="juan.perez@email.com"
                   className={errors.email ? 'border-destructive' : ''}
                 />
@@ -427,9 +500,13 @@ export const ClientForm = () => {
                   id="phone"
                   value={formData.phone}
                   onChange={(e) => handleChange('phone', e.target.value)}
+                  onBlur={() => handleBlur('phone')}
                   placeholder="+54 11 1234-5678"
                   className={errors.phone ? 'border-destructive' : ''}
                 />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Incluye código de país y de área para evitar confusiones.
+                </p>
                 {errors.phone && (
                   <p className="text-sm text-destructive mt-1">{errors.phone}</p>
                 )}
@@ -468,6 +545,7 @@ export const ClientForm = () => {
                   id="broker"
                   value={formData.broker}
                   onChange={(e) => handleChange('broker', e.target.value)}
+                  onBlur={() => handleBlur('broker')}
                   placeholder="Ej: Banco Galicia, Invertir Online"
                   className={errors.broker ? 'border-destructive' : ''}
                   list="brokers-list"
@@ -488,9 +566,13 @@ export const ClientForm = () => {
                   id="investmentHorizon"
                   value={formData.investmentHorizon}
                   onChange={(e) => handleChange('investmentHorizon', e.target.value)}
+                  onBlur={() => handleBlur('investmentHorizon')}
                   placeholder="Ej: 5-7 años"
                   className={errors.investmentHorizon ? 'border-destructive' : ''}
                 />
+                <p className="text-sm text-muted-foreground mt-1">
+                  Puedes usar rangos de tiempo (ej: 3-5 años) o descripciones como "largo plazo".
+                </p>
                 {errors.investmentHorizon && (
                   <p className="text-sm text-destructive mt-1">{errors.investmentHorizon}</p>
                 )}
@@ -510,6 +592,7 @@ export const ClientForm = () => {
               id="objectives"
               value={formData.objectives}
               onChange={(value) => handleChange('objectives', value)}
+              onFieldBlur={() => handleBlur('objectives')}
               placeholder="Describe los objetivos financieros del cliente..."
               error={errors.objectives}
             />
