@@ -39,7 +39,7 @@ export const Messages = () => {
   // Verificar si hay mensajes no leídos (del cliente y no leídos)
   const hasUnreadMessages = (clientId: string) => {
     return messages.some(
-      (msg) => msg.clientId === clientId && !msg.isFromAdvisor && !msg.read
+      (msg) => msg.clientId === clientId && !msg.isFromAdvisor && !msg.visto
     );
   };
 

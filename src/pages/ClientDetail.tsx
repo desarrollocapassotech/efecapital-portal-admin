@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -14,6 +14,8 @@ import {
   Image as ImageIcon,
   FileText,
   FileDown,
+  CheckCheck,
+  Clock,
 } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
@@ -32,6 +34,7 @@ const ClientDetail = () => {
     activities,
     addMessage,
     updateClient,
+    markClientMessagesAsRead,
   } = useDataStore();
 
   const [newMessage, setNewMessage] = useState('');
@@ -66,9 +69,27 @@ const ClientDetail = () => {
     email: client.email,
   };
 
-  const clientMessages = messages
-    .filter((m) => m.clientId === id)
-    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  const clientMessages = useMemo(
+    () =>
+      messages
+        .filter((m) => m.clientId === id)
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()),
+    [id, messages]
+  );
+
+  useEffect(() => {
+    if (!id) {
+      return;
+    }
+
+    const hasUnseenMessages = clientMessages.some(
+      (message) => !message.isFromAdvisor && !message.visto
+    );
+
+    if (hasUnseenMessages) {
+      markClientMessagesAsRead(id);
+    }
+  }, [id, clientMessages, markClientMessagesAsRead]);
 
   const clientActivities = activities
     .filter((a) => a.clientId === id)
@@ -312,13 +333,26 @@ const ClientDetail = () => {
                               : 'bg-muted border-l-4 border-border mr-8 self-start'
                           }`}
                         >
-                          <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center justify-between mb-2 gap-4">
                             <span className="text-sm font-medium">
                               {message.isFromAdvisor ? 'Tú (Asesora)' : client.firstName}
                             </span>
-                            <span className="text-xs text-muted-foreground">
-                              {format(new Date(message.timestamp), 'dd/MM HH:mm', { locale: es })}
-                            </span>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <span>
+                                {format(new Date(message.timestamp), 'dd/MM HH:mm', { locale: es })}
+                              </span>
+                              {message.visto ? (
+                                <CheckCheck
+                                  className="h-4 w-4 text-emerald-500"
+                                  aria-label="Mensaje visto"
+                                />
+                              ) : (
+                                <Clock
+                                  className="h-4 w-4 text-muted-foreground"
+                                  aria-label="Mensaje pendiente de lectura"
+                                />
+                              )}
+                            </div>
                           </div>
 
                           {isFile ? (
