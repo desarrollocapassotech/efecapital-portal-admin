@@ -71,7 +71,9 @@ export const Clients = () => {
 
   const getClientStats = (clientId: string) => {
     const clientMessages = messages.filter(m => m.clientId === clientId);
-    const clientDocuments = documents.filter(d => d.clientId === clientId);
+    const clientDocuments = documents.filter(
+      (document) => document.visibility === 'all' || document.clientIds.includes(clientId)
+    );
     const pendingMessages = clientMessages.filter(m => m.status === 'pendiente' && !m.isFromAdvisor);
     
     return {
