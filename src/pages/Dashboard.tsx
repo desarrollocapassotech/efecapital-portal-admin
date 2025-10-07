@@ -23,6 +23,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { format, differenceInDays, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { Progress } from '@/components/ui/progress';
 
 export const Dashboard = () => {
   const { clients, messages, notifications, updateClient, addActivity } = useDataStore();
@@ -39,6 +40,48 @@ export const Dashboard = () => {
   const unreadNotifications = notifications.filter((n) => !n.read).length;
   const clientsNoContact = clients.filter(
     (c) => differenceInDays(new Date(), c.lastContact) > 7
+  ).length;
+
+  const totalMessages = messages.length;
+  const totalNotifications = notifications.length;
+
+  const clientsContactedLast30Days = clients.filter(
+    (c) => differenceInDays(new Date(), c.lastContact) <= 30
+  ).length;
+  const activePortfolioPercentage = totalClients
+    ? Math.round((clientsContactedLast30Days / totalClients) * 100)
+    : 0;
+
+  const clientsCreatedLast30Days = clients.filter(
+    (c) => differenceInDays(new Date(), c.createdAt) <= 30
+  ).length;
+  const clientsCreatedPrevious30Days = clients.filter((c) => {
+    const days = differenceInDays(new Date(), c.createdAt);
+    return days > 30 && days <= 60;
+  }).length;
+  const clientsGrowthDifference = clientsCreatedLast30Days - clientsCreatedPrevious30Days;
+  const clientsGrowthLabel =
+    clientsGrowthDifference === 0
+      ? 'Sin variación frente a los 30 días previos'
+      : `${clientsGrowthDifference > 0 ? '+' : ''}${clientsGrowthDifference} frente al período previo`;
+
+  const pendingMessagesPercentage = totalMessages
+    ? Math.round((pendingMessages / totalMessages) * 100)
+    : 0;
+  const advisorRepliesLast7Days = messages.filter(
+    (m) => m.isFromAdvisor && differenceInDays(new Date(), m.timestamp) <= 7
+  ).length;
+
+  const unreadNotificationsPercentage = totalNotifications
+    ? Math.round((unreadNotifications / totalNotifications) * 100)
+    : 0;
+  const notificationsCleared = totalNotifications - unreadNotifications;
+
+  const clientsNoContactPercentage = totalClients
+    ? Math.round((clientsNoContact / totalClients) * 100)
+    : 0;
+  const clientsCriticalNoContact = clients.filter(
+    (c) => differenceInDays(new Date(), c.lastContact) > 14
   ).length;
 
   // Filtered clients
@@ -163,6 +206,14 @@ export const Dashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold">{totalClients}</div>
             <p className="text-xs text-muted-foreground">Cartera completa</p>
+            <div className="mt-4 space-y-2">
+              <Progress value={activePortfolioPercentage} className="h-2" />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{clientsContactedLast30Days} con contacto &lt; 30 días</span>
+                <span>{activePortfolioPercentage}%</span>
+              </div>
+              <p className="text-xs text-muted-foreground">{clientsGrowthLabel}</p>
+            </div>
           </CardContent>
         </Card>
 
@@ -174,6 +225,16 @@ export const Dashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold text-warning">{pendingMessages}</div>
             <p className="text-xs text-muted-foreground">Requieren respuesta</p>
+            <div className="mt-4 space-y-2">
+              <Progress value={pendingMessagesPercentage} className="h-2" />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{totalMessages} mensajes totales</span>
+                <span>{pendingMessagesPercentage}%</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {advisorRepliesLast7Days} respuestas del asesor en 7 días
+              </p>
+            </div>
           </CardContent>
           {pendingMessages > 0 && (
             <Badge
@@ -193,6 +254,16 @@ export const Dashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold text-primary">{unreadNotifications}</div>
             <p className="text-xs text-muted-foreground">Sin revisar</p>
+            <div className="mt-4 space-y-2">
+              <Progress value={unreadNotificationsPercentage} className="h-2" />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>{totalNotifications} generadas</span>
+                <span>{unreadNotificationsPercentage}%</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {notificationsCleared} gestionadas a tiempo
+              </p>
+            </div>
           </CardContent>
         </Card>
 
@@ -204,6 +275,16 @@ export const Dashboard = () => {
           <CardContent>
             <div className="text-2xl font-bold text-destructive">{clientsNoContact}</div>
             <p className="text-xs text-muted-foreground">Más de 7 días</p>
+            <div className="mt-4 space-y-2">
+              <Progress value={clientsNoContactPercentage} className="h-2" />
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>de {totalClients} clientes</span>
+                <span>{clientsNoContactPercentage}%</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {clientsCriticalNoContact} sin contacto &gt; 14 días
+              </p>
+            </div>
           </CardContent>
         </Card>
       </div>
