@@ -1,6 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, MessageCircle, Send } from 'lucide-react';
+import {
+  ArrowLeft,
+  MessageCircle,
+  Send,
+  Paperclip,
+  X,
+  Image as ImageIcon,
+  FileText,
+  FileDown,
+  CheckCheck,
+  Clock,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useDataStore } from '@/stores/dataStore';
@@ -14,6 +25,8 @@ const ClientChat = () => {
   const { clients, messages, addMessage, markClientMessagesAsRead } = useDataStore();
   const [reply, setReply] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const client = useMemo(() => clients.find((item) => item.id === id), [clients, id]);
 
@@ -46,31 +59,71 @@ const ClientChat = () => {
       return;
     }
 
-    markClientMessagesAsRead(id).catch((error) => {
-      console.error('Error al marcar los mensajes como leídos', error);
-    });
-  }, [id, markClientMessagesAsRead]);
+    const hasUnseenMessages = conversation.some(
+      (message) => !message.isFromAdvisor && !message.visto
+    );
+
+    if (hasUnseenMessages) {
+      markClientMessagesAsRead(id).catch((error) => {
+        console.error('Error al marcar los mensajes como leídos', error);
+      });
+    }
+  }, [conversation, id, markClientMessagesAsRead]);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [conversation.length]);
 
   const handleSendMessage = async () => {
-    if (!id || !reply.trim()) {
+    if (!id || (!reply.trim() && attachments.length === 0)) {
       return;
     }
 
     setIsSending(true);
     try {
-      await addMessage({
-        clientId: id,
-        content: reply.trim(),
-        timestamp: new Date(),
-        isFromAdvisor: true,
-        status: 'respondido',
-      });
+      if (reply.trim()) {
+        await addMessage({
+          clientId: id,
+          content: reply.trim(),
+          timestamp: new Date(),
+          isFromAdvisor: true,
+          status: 'respondido',
+        });
+      }
+
+      if (attachments.length > 0) {
+        for (const file of attachments) {
+          const isImage = file.type.startsWith('image/');
+          const content = `[${isImage ? 'Imagen' : 'PDF'}: ${file.name}]`;
+
+          await addMessage({
+            clientId: id,
+            content,
+            timestamp: new Date(),
+            isFromAdvisor: true,
+            status: 'respondido',
+          });
+        }
+      }
+
       setReply('');
+      setAttachments([]);
     } catch (error) {
       console.error('Error al enviar el mensaje', error);
     } finally {
       setIsSending(false);
     }
+  };
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files) {
+      const files = Array.from(event.target.files);
+      setAttachments((previous) => [...previous, ...files]);
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments((previous) => previous.filter((_, idx) => idx !== index));
   };
 
   const handleGoBack = () => {
@@ -122,7 +175,7 @@ const ClientChat = () => {
         </Button>
       </div>
 
-      <Card className="max-w-4xl">
+      <Card className="flex max-w-4xl flex-1 flex-col">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div className="flex items-center gap-2">
             <MessageCircle className="h-5 w-5 text-primary" />
@@ -132,56 +185,156 @@ const ClientChat = () => {
             {conversation.length} mensaje{conversation.length === 1 ? '' : 's'}
           </span>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-4">
-            {conversation.length > 0 ? (
-              conversation.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${message.isFromAdvisor ? 'justify-end' : 'justify-start'}`}
-                >
+        <CardContent className="flex flex-1 flex-col space-y-4">
+          <div
+            className="flex-1 space-y-3 overflow-y-auto p-2"
+            style={{
+              maxHeight: 'calc(100vh - 360px)',
+              scrollbarWidth: 'thin',
+              scrollbarColor: '#9ca3af transparent',
+            }}
+          >
+            {conversation.length === 0 ? (
+              <p className="py-4 text-center text-muted-foreground">No hay mensajes todavía</p>
+            ) : (
+              conversation.map((message) => {
+                const isFile =
+                  message.content.startsWith('[PDF:') || message.content.startsWith('[Imagen:');
+
+                const getFileName = () => {
+                  const match = message.content.match(/\[.*?:\s*(.+?)\]/);
+                  return match ? match[1] : 'Archivo';
+                };
+
+                const fileName = getFileName();
+
+                return (
                   <div
-                    className={`max-w-[75%] rounded-lg px-3 py-2 text-sm shadow-sm ${
+                    key={message.id}
+                    className={`max-w-[80%] rounded-lg p-3 ${
                       message.isFromAdvisor
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted text-foreground'
+                        ? 'ml-auto bg-primary/10 border-l-4 border-primary'
+                        : 'mr-auto bg-muted border-l-4 border-border'
                     }`}
                   >
-                    <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                    <span className="mt-1 block text-[10px] text-muted-foreground/80">
-                      {format(message.timestamp, 'dd MMM yyyy HH:mm', {
-                        locale: es,
-                      })}
-                    </span>
+                    <div className="mb-2 flex items-center justify-between gap-4">
+                      <span className="text-sm font-medium">
+                        {message.isFromAdvisor ? 'Tú (Asesora)' : client.firstName}
+                      </span>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{format(new Date(message.timestamp), 'dd/MM HH:mm', { locale: es })}</span>
+                        {message.visto ? (
+                          <CheckCheck className="h-4 w-4 text-emerald-500" aria-label="Mensaje visto" />
+                        ) : (
+                          <Clock
+                            className="h-4 w-4 text-muted-foreground"
+                            aria-label="Mensaje pendiente de lectura"
+                          />
+                        )}
+                      </div>
+                    </div>
+
+                    {isFile ? (
+                      <div
+                        className="flex cursor-pointer items-center gap-3 rounded-lg border border-border bg-background p-3 shadow-sm transition-shadow hover:shadow"
+                        onClick={() => alert(`Simulando descarga de: ${fileName}`)}
+                      >
+                        {message.content.startsWith('[Imagen:') ? (
+                          <div className="flex h-10 w-10 items-center justify-center rounded bg-muted">
+                            <ImageIcon className="h-6 w-6 text-muted-foreground" />
+                          </div>
+                        ) : (
+                          <div className="flex h-10 w-10 items-center justify-center rounded bg-primary/10">
+                            <FileText className="h-6 w-6 text-primary" />
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <h4 className="truncate text-sm font-medium">{fileName}</h4>
+                          <p className="text-xs text-muted-foreground">
+                            {message.content.startsWith('[Imagen:') ? 'Imagen' : 'Documento PDF'}
+                          </p>
+                        </div>
+
+                        <FileDown className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                      </div>
+                    ) : (
+                      <p className="text-sm">{message.content}</p>
+                    )}
                   </div>
-                </div>
-              ))
-            ) : (
-              <div className="rounded-lg border border-dashed border-border/60 p-6 text-center text-muted-foreground">
-                Todavía no hay mensajes en esta conversación.
-              </div>
+                );
+              })
             )}
+            <div ref={messagesEndRef} />
           </div>
 
-          <div className="space-y-3">
-            <Textarea
-              value={reply}
-              onChange={(event) => setReply(event.target.value)}
-              placeholder="Escribe tu mensaje para el cliente..."
-              rows={4}
-            />
-            <div className="flex items-center justify-end gap-2">
+          <div className="space-y-3 border-t pt-4">
+            {attachments.length > 0 && (
+              <div className="flex flex-wrap gap-2 rounded bg-muted p-2">
+                {attachments.map((file, index) => (
+                  <div
+                    key={`${file.name}-${index}`}
+                    className="flex items-center gap-1 rounded border bg-background px-2 py-1 text-sm"
+                  >
+                    {file.type.startsWith('image/') ? (
+                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                    )}
+                    <span className="max-w-xs truncate">{file.name}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeAttachment(index)}
+                      className="text-destructive hover:text-red-700"
+                      aria-label={`Eliminar ${file.name}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-end gap-2">
+              <label className="cursor-pointer rounded p-2 hover:bg-muted" aria-label="Adjuntar archivo">
+                <Paperclip className="h-5 w-5 text-muted-foreground" />
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,image/*"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+              </label>
+
+              <Textarea
+                value={reply}
+                onChange={(event) => setReply(event.target.value)}
+                placeholder="Escribe tu mensaje para el cliente..."
+                rows={3}
+                className="flex-1"
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+              />
+
               <Button
-                variant="outline"
-                onClick={() => setReply('')}
-                disabled={isSending || reply.length === 0}
+                onClick={handleSendMessage}
+                disabled={isSending || (!reply.trim() && attachments.length === 0)}
+                size="icon"
+                aria-label="Enviar mensaje"
               >
-                Limpiar
-              </Button>
-              <Button onClick={handleSendMessage} disabled={isSending || reply.trim().length === 0}>
-                <Send className="mr-2 h-4 w-4" /> Enviar mensaje
+                <Send className="h-4 w-4" />
               </Button>
             </div>
+
+            <p className="text-xs text-muted-foreground">
+              Puedes adjuntar PDFs o imágenes. Presiona{' '}
+              <kbd className="rounded border bg-background px-1">Enter</kbd> para enviar.
+            </p>
           </div>
         </CardContent>
       </Card>
