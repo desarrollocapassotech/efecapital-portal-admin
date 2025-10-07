@@ -44,6 +44,8 @@ export interface Document {
   description: string;
   uploadDate: Date;
   size: number;
+  fileUrl: string;
+  storagePath: string;
   visibility: 'all' | 'selected';
   clientIds: string[];
 }
