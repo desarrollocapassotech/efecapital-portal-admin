@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MessageCircle, Search, Send } from 'lucide-react';
+import { MessageCircle, Search } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,14 +8,10 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 
 export const Messages = () => {
-  const { messages, clients, addMessage, markClientMessagesAsRead } = useDataStore();
+  const { messages, clients } = useDataStore();
   const [searchTerm, setSearchTerm] = useState('');
-  const [expandedClientId, setExpandedClientId] = useState<string | null>(null);
-  const [quickReply, setQuickReply] = useState('');
-  const [isSending, setIsSending] = useState(false);
 
   const newMessagesCount = messages.filter(
     (msg) => !msg.isFromAdvisor && (!msg.visto || msg.status === 'pendiente')
@@ -54,45 +50,6 @@ export const Messages = () => {
     return messages.some(
       (msg) => msg.clientId === clientId && !msg.isFromAdvisor && !msg.visto
     );
-  };
-
-  const toggleClientQuickReply = (clientId: string) => {
-    if (expandedClientId === clientId) {
-      setExpandedClientId(null);
-      setQuickReply('');
-      return;
-    }
-
-    setExpandedClientId(clientId);
-    setQuickReply('');
-
-    if (hasUnreadMessages(clientId)) {
-      markClientMessagesAsRead(clientId).catch((error) => {
-        console.error('Error al marcar mensajes como leídos', error);
-      });
-    }
-  };
-
-  const handleSendQuickReply = async () => {
-    if (!expandedClientId || !quickReply.trim()) {
-      return;
-    }
-
-    setIsSending(true);
-    try {
-      await addMessage({
-        clientId: expandedClientId,
-        content: quickReply.trim(),
-        timestamp: new Date(),
-        isFromAdvisor: true,
-        status: 'respondido',
-      });
-      setQuickReply('');
-    } catch (error) {
-      console.error('Error al enviar la respuesta rápida', error);
-    } finally {
-      setIsSending(false);
-    }
   };
 
   return (
@@ -159,15 +116,6 @@ export const Messages = () => {
               {filteredClients.map((client) => {
                 const clientMessages = messages.filter((m) => m.clientId === client.id);
                 const latestMessage = clientMessages[0];
-                const recentMessages = clientMessages
-                  .slice(0, 5)
-                  .map((message) => ({
-                    ...message,
-                    timestamp: new Date(message.timestamp),
-                  }))
-                  .reverse();
-                const isExpanded = expandedClientId === client.id;
-
                 return (
                   <div
                     key={client.id}
@@ -225,79 +173,12 @@ export const Messages = () => {
                             <Button asChild variant="ghost" size="sm">
                               <Link to={`/clients/${client.id}`}>Ver detalle</Link>
                             </Button>
-                            <Button
-                              variant={isExpanded ? 'secondary' : 'default'}
-                              size="sm"
-                              onClick={() => toggleClientQuickReply(client.id)}
-                            >
-                              {isExpanded ? 'Ocultar' : 'Responder'}
+                            <Button asChild size="sm">
+                              <Link to={`/messages/${client.id}`}>Abrir chat</Link>
                             </Button>
                           </div>
                         </div>
                       </div>
-
-                      {isExpanded && (
-                        <div className="space-y-4 border-t border-border/60 pt-4">
-                          <div className="space-y-3">
-                            {recentMessages.length > 0 ? (
-                              recentMessages.map((message) => (
-                                <div
-                                  key={message.id}
-                                  className={`flex ${
-                                    message.isFromAdvisor ? 'justify-end' : 'justify-start'
-                                  }`}
-                                >
-                                  <div
-                                    className={`max-w-[75%] rounded-lg px-3 py-2 text-sm shadow-sm ${
-                                      message.isFromAdvisor
-                                        ? 'bg-primary text-primary-foreground'
-                                        : 'bg-muted text-foreground'
-                                    }`}
-                                  >
-                                    <p className="whitespace-pre-wrap break-words">{message.content}</p>
-                                    <span className="mt-1 block text-[10px] text-muted-foreground/80">
-                                      {format(message.timestamp, 'dd MMM yyyy HH:mm', {
-                                        locale: es,
-                                      })}
-                                    </span>
-                                  </div>
-                                </div>
-                              ))
-                            ) : (
-                              <p className="text-sm text-muted-foreground">
-                                No hay mensajes previos en esta conversación.
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="space-y-2">
-                            <Textarea
-                              value={quickReply}
-                              onChange={(event) => setQuickReply(event.target.value)}
-                              placeholder="Escribe una respuesta rápida..."
-                              rows={3}
-                            />
-                            <div className="flex items-center justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setQuickReply('')}
-                                disabled={isSending}
-                              >
-                                Limpiar
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={handleSendQuickReply}
-                                disabled={isSending || quickReply.trim().length === 0}
-                              >
-                                <Send className="mr-2 h-4 w-4" />
-                                Enviar respuesta
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
