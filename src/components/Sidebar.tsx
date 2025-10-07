@@ -69,7 +69,7 @@ export const Sidebar = () => {
           </button>
 
           <Link
-            to="/"
+            to="/clients"
             className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center space-x-2"
             onClick={() => setIsSidebarOpen(false)}
           >
@@ -115,7 +115,7 @@ export const Sidebar = () => {
           {/* Header del sidebar (solo desktop) */}
           <div className="hidden lg:block p-6 border-b border-border">
             <Link
-              to="/"
+              to="/clients"
               className="flex items-center space-x-3"
             >
               <div className="p-2 bg-primary rounded-lg">
