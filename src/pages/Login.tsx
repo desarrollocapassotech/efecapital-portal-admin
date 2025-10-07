@@ -76,8 +76,8 @@ export const Login = () => {
             <TrendingUp className="h-8 w-8 text-primary-foreground" />
           </div>
           <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold text-foreground">FinanceAdvisor</CardTitle>
-            <p className="text-muted-foreground">Panel Profesional de Gestión</p>
+            <CardTitle className="text-2xl font-bold text-foreground">EFECapital</CardTitle>
+            <p className="text-muted-foreground">Panel de Administrador</p>
           </div>
         </CardHeader>
 
