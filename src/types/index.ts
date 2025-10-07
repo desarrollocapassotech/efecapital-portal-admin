@@ -33,6 +33,7 @@ export interface Message {
   timestamp: Date;
   isFromAdvisor: boolean;
   status: 'pendiente' | 'respondido' | 'en_revision';
+  visto?: boolean;
   read?: boolean;
 }
 

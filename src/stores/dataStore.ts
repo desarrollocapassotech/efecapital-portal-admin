@@ -153,6 +153,13 @@ export const useDataStore = create<DataStore>((set, get) => {
           const messages = snapshot.docs
             .map((docSnapshot) => {
               const data = docSnapshot.data();
+              const visto =
+                typeof data.visto === 'boolean'
+                  ? data.visto
+                  : typeof data.read === 'boolean'
+                    ? data.read
+                    : Boolean(data.isFromAdvisor);
+
               return {
                 id: docSnapshot.id,
                 clientId: data.clientId ?? '',
@@ -160,7 +167,8 @@ export const useDataStore = create<DataStore>((set, get) => {
                 timestamp: toDate(data.timestamp),
                 isFromAdvisor: Boolean(data.isFromAdvisor),
                 status: (data.status ?? 'pendiente') as Message['status'],
-                read: data.read ?? Boolean(data.isFromAdvisor),
+                visto,
+                read: visto,
               } satisfies Message;
             })
             .sort(
@@ -329,6 +337,13 @@ export const useDataStore = create<DataStore>((set, get) => {
     },
 
     addMessage: async (messageData) => {
+      const visto =
+        typeof messageData.visto === 'boolean'
+          ? messageData.visto
+          : messageData.isFromAdvisor
+            ? true
+            : false;
+
       await addDoc(collection(db, 'messages'), {
         clientId: messageData.clientId,
         content: messageData.content,
@@ -337,7 +352,8 @@ export const useDataStore = create<DataStore>((set, get) => {
           : serverTimestamp(),
         isFromAdvisor: messageData.isFromAdvisor,
         status: messageData.status ?? 'pendiente',
-        read: messageData.isFromAdvisor ? true : messageData.read ?? false,
+        visto,
+        read: visto,
       });
 
       const clientRef = doc(db, 'clients', messageData.clientId);
@@ -371,15 +387,14 @@ export const useDataStore = create<DataStore>((set, get) => {
     },
 
     markMessageAsRead: async (id) => {
-      await updateDoc(doc(db, 'messages', id), { read: true });
+      await updateDoc(doc(db, 'messages', id), { visto: true, read: true });
     },
 
     markClientMessagesAsRead: async (clientId) => {
       const messagesQuery = query(
         collection(db, 'messages'),
         where('clientId', '==', clientId),
-        where('isFromAdvisor', '==', false),
-        where('read', '==', false)
+        where('isFromAdvisor', '==', false)
       );
 
       const snapshot = await getDocs(messagesQuery);
@@ -387,9 +402,25 @@ export const useDataStore = create<DataStore>((set, get) => {
         return;
       }
 
+      const unseenMessages = snapshot.docs.filter((messageDoc) => {
+        const data = messageDoc.data();
+        const visto =
+          typeof data.visto === 'boolean'
+            ? data.visto
+            : typeof data.read === 'boolean'
+              ? data.read
+              : false;
+
+        return !visto;
+      });
+
+      if (unseenMessages.length === 0) {
+        return;
+      }
+
       const batch = writeBatch(db);
-      snapshot.forEach((messageDoc) => {
-        batch.update(messageDoc.ref, { read: true });
+      unseenMessages.forEach((messageDoc) => {
+        batch.update(messageDoc.ref, { visto: true, read: true });
       });
       await batch.commit();
     },
