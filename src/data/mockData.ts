@@ -145,39 +145,43 @@ export const mockMessages: Message[] = [
 export const mockDocuments: Document[] = [
   {
     id: '1',
-    clientId: '1',
     name: 'Reporte_Performance_Enero_2024.pdf',
     type: 'rendimiento',
     description: 'Análisis detallado de performance de cartera enero 2024',
     uploadDate: new Date('2024-01-18T15:30:00'),
-    size: 2048576
+    size: 2048576,
+    visibility: 'selected',
+    clientIds: ['1']
   },
   {
     id: '2',
-    clientId: '2',
     name: 'Recomendaciones_Portfolio_Agresivo.pdf',
     type: 'recomendaciones',
     description: 'Sugerencias de ajuste para perfil agresivo',
     uploadDate: new Date('2024-01-17T11:00:00'),
-    size: 1536000
+    size: 1536000,
+    visibility: 'selected',
+    clientIds: ['2']
   },
   {
     id: '3',
-    clientId: '3',
     name: 'Informe_Mercado_Semanal.pdf',
     type: 'informe_mercado',
     description: 'Análisis semanal de condiciones del mercado',
     uploadDate: new Date('2024-01-16T09:45:00'),
-    size: 3072000
+    size: 3072000,
+    visibility: 'all',
+    clientIds: []
   },
   {
     id: '4',
-    clientId: '4',
     name: 'Estrategia_Conservadora_2024.pdf',
     type: 'recomendaciones',
     description: 'Plan de inversión conservador para 2024',
     uploadDate: new Date('2024-01-15T14:20:00'),
-    size: 2560000
+    size: 2560000,
+    visibility: 'selected',
+    clientIds: ['4']
   }
 ];
 
@@ -266,7 +270,9 @@ export const getMockDataForUser = (userId: string) => {
 
   // Filtrar datos relacionados con el cliente
   const mensajes = mockMessages.filter(m => m.clientId === userId);
-  const archivos = mockDocuments.filter(d => d.clientId === userId);
+  const archivos = mockDocuments.filter(
+    d => d.visibility === 'all' || d.clientIds.includes(userId)
+  );
   const historial = mockActivities.filter(a => a.clientId === userId);
 
   // Aquí puedes simular más datos si no los tienes en otro lado

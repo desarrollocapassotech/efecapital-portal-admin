@@ -12,6 +12,7 @@ import ClientDetail from "./pages/ClientDetail";
 import { ClientForm } from "./pages/ClientForm";
 import { Messages } from "./pages/Messages";
 import ClientChat from "./pages/ClientChat";
+import { Reports } from "./pages/Reports";
 import NotFound from "./pages/NotFound";
 import { useAuthStore } from "@/stores/authStore";
 import { useDataStore } from "@/stores/dataStore";
@@ -59,6 +60,7 @@ const App = () => {
               <Route path="clients/new" element={<ClientForm />} />
               <Route path="messages" element={<Messages />} />
               <Route path="messages/:id" element={<ClientChat />} />
+              <Route path="reports" element={<Reports />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

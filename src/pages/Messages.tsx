@@ -141,7 +141,7 @@ export const Messages = () => {
                           <div className="min-w-0 space-y-1">
                             <div className="flex items-center gap-2">
                               <Link
-                                to={`/clients/${client.id}`}
+                                to={`/messages/${client.id}`}
                                 className="font-semibold text-foreground transition-colors hover:text-primary"
                               >
                                 {client.firstName} {client.lastName}

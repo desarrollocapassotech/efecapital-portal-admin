@@ -1,14 +1,5 @@
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
-import {
-  Users,
-  MessageCircle,
-  FileText,
-  Bell,
-  LogOut,
-  TrendingUp,
-  Menu,
-  X,
-} from 'lucide-react';
+import { Users, MessageCircle, FileText, LogOut, TrendingUp, Menu, X } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
@@ -18,6 +9,7 @@ import { useState, useEffect } from 'react';
 const navigation = [
   { name: 'Clientes', href: '/clients', icon: Users },
   { name: 'Mensajes', href: '/messages', icon: MessageCircle },
+  { name: 'Informes', href: '/reports', icon: FileText },
 ];
 
 export const Sidebar = () => {
@@ -76,7 +68,6 @@ export const Sidebar = () => {
             <Menu className="h-6 w-6" />
           </button>
 
-          {/* FinanceAdvisor clickeable y centrado */}
           <Link
             to="/"
             className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center space-x-2"
@@ -86,8 +77,8 @@ export const Sidebar = () => {
               <TrendingUp className="h-5 w-5 text-primary-foreground" />
             </div>
             <div className="text-center">
-              <h1 className="text-base font-semibold text-foreground">FinanceAdvisor</h1>
-              <p className="text-xs text-muted-foreground">Panel Profesional</p>
+              <h1 className="text-base font-semibold text-foreground">EFECapital</h1>
+              <p className="text-xs text-muted-foreground">Panel de Administrador</p>
             </div>
           </Link>
 
@@ -131,8 +122,8 @@ export const Sidebar = () => {
                 <TrendingUp className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-foreground">FinanceAdvisor</h1>
-                <p className="text-sm text-muted-foreground">Panel Profesional</p>
+                <h1 className="text-lg font-semibold text-foreground">EFECapital</h1>
+                <p className="text-sm text-muted-foreground">Panel de Administrador</p>
               </div>
             </Link>
           </div>
