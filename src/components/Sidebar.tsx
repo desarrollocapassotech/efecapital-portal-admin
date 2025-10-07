@@ -29,7 +29,11 @@ export const Sidebar = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const unreadNotifications = notifications.filter((n) => !n.read).length;
-  const pendingMessages = messages.filter((m) => m.status === 'pendiente' && !m.isFromAdvisor).length;
+  const newMessagesCount = messages.filter(
+    (m) => !m.isFromAdvisor && (!m.visto || m.status === 'pendiente')
+  ).length;
+  const displayNewMessagesCount = newMessagesCount > 99 ? '99+' : newMessagesCount;
+  const hasNewMessages = newMessagesCount > 0;
 
   const displayName = user?.name || user?.email || 'Usuario';
   const initials = displayName
@@ -85,6 +89,22 @@ export const Sidebar = () => {
               <h1 className="text-base font-semibold text-foreground">FinanceAdvisor</h1>
               <p className="text-xs text-muted-foreground">Panel Profesional</p>
             </div>
+          </Link>
+
+          <Link
+            to="/messages"
+            className="p-2 rounded-md text-foreground hover:bg-muted relative"
+            onClick={() => setIsSidebarOpen(false)}
+          >
+            <MessageCircle className="h-6 w-6" />
+            {hasNewMessages && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1 text-xs leading-none flex items-center justify-center"
+              >
+                {displayNewMessagesCount}
+              </Badge>
+            )}
           </Link>
         </div>
       </header>
@@ -143,7 +163,7 @@ export const Sidebar = () => {
                   key={item.name}
                   to={item.href}
                   className={`
-                    flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                    relative flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors
                     ${active
                       ? 'bg-primary text-primary-foreground shadow-sm'
                       : 'text-muted-foreground hover:bg-muted hover:text-foreground'
@@ -158,10 +178,18 @@ export const Sidebar = () => {
                       {unreadNotifications}
                     </Badge>
                   )}
-                  {item.name === 'Mensajes' && pendingMessages > 0 && (
-                    <Badge variant="secondary" className="ml-2 h-5 px-2 text-xs">
-                      {pendingMessages}
-                    </Badge>
+                  {item.name === 'Mensajes' && hasNewMessages && (
+                    <>
+                      <Badge
+                        variant="destructive"
+                        className="hidden lg:flex absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1 text-xs leading-none items-center justify-center"
+                      >
+                        {displayNewMessagesCount}
+                      </Badge>
+                      <Badge variant="secondary" className="lg:hidden ml-2 h-5 px-2 text-xs">
+                        {displayNewMessagesCount}
+                      </Badge>
+                    </>
                   )}
                 </NavLink>
               );
