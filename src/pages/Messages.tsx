@@ -2,15 +2,21 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, Search } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { Badge } from '@/components/ui/badge';
 
 export const Messages = () => {
   const { messages, clients } = useDataStore();
   const [searchTerm, setSearchTerm] = useState('');
+
+  const newMessagesCount = messages.filter(
+    (msg) => !msg.isFromAdvisor && (!msg.visto || msg.status === 'pendiente')
+  ).length;
+  const displayNewMessagesCount = newMessagesCount > 99 ? '99+' : newMessagesCount;
+  const hasNewMessages = newMessagesCount > 0;
 
   // Filtrar clientes que tengan mensajes y coincidan con el término de búsqueda
   const filteredClients = clients
@@ -47,12 +53,30 @@ export const Messages = () => {
     <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-0">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">Centro de Mensajes</h1>
-          <p className="text-muted-foreground">
-            Gestiona todas las comunicaciones con tus clientes
-          </p>
+        <div className="flex items-start gap-3">
+          <div className="relative lg:hidden">
+            <MessageCircle className="h-10 w-10 text-primary" />
+            {hasNewMessages && (
+              <Badge
+                variant="destructive"
+                className="absolute -top-1 -right-1 h-6 min-w-[1.5rem] px-1 text-xs leading-none flex items-center justify-center"
+              >
+                {displayNewMessagesCount}
+              </Badge>
+            )}
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">Centro de Mensajes</h1>
+            <p className="text-muted-foreground">
+              Gestiona todas las comunicaciones con tus clientes
+            </p>
+          </div>
         </div>
+        {hasNewMessages && (
+          <Badge className="hidden lg:inline-flex h-6 min-w-[1.5rem] px-2 text-xs items-center justify-center">
+            {displayNewMessagesCount}
+          </Badge>
+        )}
       </div>
 
       {/* Search Bar */}

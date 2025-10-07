@@ -29,7 +29,7 @@ export const Dashboard = () => {
   // Statistics
   const totalClients = clients.length;
   const pendingMessages = messages.filter(
-    (m) => m.status === 'pendiente' && !m.isFromAdvisor
+    (m) => !m.isFromAdvisor && (!m.visto || m.status === 'pendiente')
   ).length;
   const unreadNotifications = notifications.filter((n) => !n.read).length;
   const clientsNoContact = clients.filter(
@@ -110,7 +110,7 @@ export const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Mensajes Pendientes</CardTitle>
             <MessageCircle className="h-4 w-4 text-muted-foreground" />
@@ -119,6 +119,14 @@ export const Dashboard = () => {
             <div className="text-2xl font-bold text-warning">{pendingMessages}</div>
             <p className="text-xs text-muted-foreground">Requieren respuesta</p>
           </CardContent>
+          {pendingMessages > 0 && (
+            <Badge
+              variant="destructive"
+              className="absolute -top-2 -right-2 h-6 min-w-[1.5rem] px-1 text-xs leading-none flex items-center justify-center"
+            >
+              {pendingMessages > 99 ? '99+' : pendingMessages}
+            </Badge>
+          )}
         </Card>
 
         <Card>
