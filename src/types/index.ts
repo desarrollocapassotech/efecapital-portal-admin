@@ -39,12 +39,13 @@ export interface Message {
 
 export interface Document {
   id: string;
-  clientId: string;
   name: string;
   type: 'rendimiento' | 'recomendaciones' | 'informe_mercado';
   description: string;
   uploadDate: Date;
   size: number;
+  visibility: 'all' | 'selected';
+  clientIds: string[];
 }
 
 export interface Activity {

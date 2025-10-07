@@ -329,7 +329,20 @@ export const useDataStore = create<DataStore>((set, get) => {
 
       set((state) => ({
         activities: state.activities.filter((activity) => activity.clientId !== id),
-        documents: state.documents.filter((document) => document.clientId !== id),
+        documents: state.documents
+          .map((document) => {
+            if (document.visibility === 'all') {
+              return document;
+            }
+
+            if (!document.clientIds.includes(id)) {
+              return document;
+            }
+
+            const updatedClientIds = document.clientIds.filter((clientId) => clientId !== id);
+            return { ...document, clientIds: updatedClientIds };
+          })
+          .filter((document) => document.visibility === 'all' || document.clientIds.length > 0),
         notifications: state.notifications.filter(
           (notification) => notification.clientId !== id
         ),
@@ -426,31 +439,42 @@ export const useDataStore = create<DataStore>((set, get) => {
     },
 
     addDocument: (documentData) => {
+      const normalizedClientIds =
+        documentData.visibility === 'selected'
+          ? Array.from(new Set(documentData.clientIds))
+          : [];
+
       const newDocument: Document = {
         ...documentData,
+        clientIds: normalizedClientIds,
         id: Math.random().toString(36).substr(2, 9),
       };
+
       set((state) => ({ documents: [...state.documents, newDocument] }));
 
-      get().addActivity({
-        clientId: newDocument.clientId,
-        type: 'documento',
-        title: 'Documento subido',
-        description: newDocument.name,
-        timestamp: newDocument.uploadDate,
-      });
+      const targetClients =
+        newDocument.visibility === 'all'
+          ? get().clients
+          : get().clients.filter((client) => newDocument.clientIds.includes(client.id));
 
-      const client = get().clients.find((c) => c.id === newDocument.clientId);
-      if (client) {
+      targetClients.forEach((client) => {
+        get().addActivity({
+          clientId: client.id,
+          type: 'documento',
+          title: 'Documento subido',
+          description: newDocument.name,
+          timestamp: newDocument.uploadDate,
+        });
+
         get().addNotification({
-          title: `Documento enviado a ${client.firstName} ${client.lastName}`,
-          message: `${newDocument.name} - ${newDocument.description}`,
+          title: `Nuevo informe: ${newDocument.name}`,
+          message: newDocument.description,
           timestamp: newDocument.uploadDate,
           read: false,
           type: 'informe',
           clientId: client.id,
         });
-      }
+      });
     },
 
     deleteDocument: (id) => {

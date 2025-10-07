@@ -1,14 +1,5 @@
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
-import {
-  Users,
-  MessageCircle,
-  FileText,
-  Bell,
-  LogOut,
-  TrendingUp,
-  Menu,
-  X,
-} from 'lucide-react';
+import { Users, MessageCircle, FileText, LogOut, TrendingUp, Menu, X } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
@@ -18,6 +9,7 @@ import { useState, useEffect } from 'react';
 const navigation = [
   { name: 'Clientes', href: '/clients', icon: Users },
   { name: 'Mensajes', href: '/messages', icon: MessageCircle },
+  { name: 'Informes', href: '/reports', icon: FileText },
 ];
 
 export const Sidebar = () => {
