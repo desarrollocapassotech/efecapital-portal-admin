@@ -10,6 +10,9 @@ import {
   Clock,
   AlertTriangle,
   Eye,
+  Phone,
+  CalendarClock,
+  CheckCircle2,
 } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
@@ -17,14 +20,16 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInDays, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
 
 export const Dashboard = () => {
-  const { clients, messages, notifications } = useDataStore();
+  const { clients, messages, notifications, updateClient, addActivity } = useDataStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterDays, setFilterDays] = useState<string>('all');
   const [filterMessages, setFilterMessages] = useState<string>('all');
+  const { toast } = useToast();
 
   // Statistics
   const totalClients = clients.length;
@@ -80,6 +85,57 @@ export const Dashboard = () => {
     if (days <= 7) return 'text-success';
     if (days <= 14) return 'text-warning';
     return 'text-destructive';
+  };
+
+  const getPhoneHref = (phone: string) => {
+    const sanitized = phone.replace(/\s+/g, '');
+    return `tel:${sanitized}`;
+  };
+
+  const handleScheduleReminder = (clientId: string, fullName: string) => {
+    const reminderDate = addDays(new Date(), 3);
+
+    addActivity({
+      clientId,
+      type: 'actualizacion',
+      title: 'Recordatorio agendado',
+      description: `Seguimiento planificado para ${format(reminderDate, "d 'de' MMMM", {
+        locale: es,
+      })}.`,
+      timestamp: new Date(),
+    });
+
+    toast({
+      title: 'Recordatorio creado',
+      description: `Programaste un recordatorio rápido para ${fullName}.`,
+    });
+  };
+
+  const handleMarkAsContacted = async (clientId: string, fullName: string) => {
+    try {
+      const now = new Date();
+      await updateClient(clientId, { lastContact: now });
+
+      addActivity({
+        clientId,
+        type: 'actualizacion',
+        title: 'Contacto registrado',
+        description: `Se marcó contacto con ${fullName}.`,
+        timestamp: now,
+      });
+
+      toast({
+        title: 'Contacto actualizado',
+        description: `${fullName} se marcó como contactado hoy.`,
+      });
+    } catch (error) {
+      console.error('Error al actualizar el último contacto', error);
+      toast({
+        title: 'No se pudo actualizar',
+        description: 'Intenta nuevamente más tarde.',
+        variant: 'destructive',
+      });
+    }
   };
 
   return (
@@ -265,17 +321,50 @@ export const Dashboard = () => {
                     </div>
 
                     {/* Botón Ver Perfil */}
+                  <div className="flex flex-wrap gap-2 self-start sm:self-center">
+                    <Button asChild variant="secondary" size="sm">
+                      <a href={getPhoneHref(client.phone)}>
+                        <Phone className="h-4 w-4 mr-1" />
+                        Llamar
+                      </a>
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        handleScheduleReminder(
+                          client.id,
+                          `${client.firstName} ${client.lastName}`
+                        )
+                      }
+                    >
+                      <CalendarClock className="h-4 w-4 mr-1" />
+                      Recordatorio
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        handleMarkAsContacted(
+                          client.id,
+                          `${client.firstName} ${client.lastName}`
+                        )
+                      }
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      Contactado
+                    </Button>
                     <Button
                       asChild
                       variant="outline"
                       size="sm"
-                      className="self-start sm:self-center"
                     >
                       <Link to={`/clients/${client.id}`}>
                         <Eye className="h-4 w-4 mr-1" />
                         Ver Perfil
                       </Link>
                     </Button>
+                  </div>
                   </div>
                 );
               })
