@@ -178,7 +178,6 @@ export const useDataStore = create<DataStore>((set, get) => {
                 timestamp: toDate(data.timestamp),
                 isFromAdvisor: Boolean(data.isFromAdvisor),
                 status: (data.status ?? 'pendiente') as Message['status'],
-                visto,
                 read: visto,
               } satisfies Message;
             })
@@ -400,8 +399,8 @@ export const useDataStore = create<DataStore>((set, get) => {
 
     addMessage: async (messageData) => {
       const visto =
-        typeof messageData.visto === 'boolean'
-          ? messageData.visto
+        typeof messageData.read === 'boolean'
+          ? messageData.read
           : messageData.isFromAdvisor
             ? true
             : false;

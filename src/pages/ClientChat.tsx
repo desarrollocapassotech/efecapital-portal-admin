@@ -60,7 +60,7 @@ const ClientChat = () => {
     }
 
     const hasUnseenMessages = conversation.some(
-      (message) => !message.isFromAdvisor && !message.visto
+      (message) => !message.isFromAdvisor && !message.read
     );
 
     if (hasUnseenMessages) {
@@ -223,7 +223,7 @@ const ClientChat = () => {
                       </span>
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
                         <span>{format(new Date(message.timestamp), 'dd/MM HH:mm', { locale: es })}</span>
-                        {message.visto ? (
+                        {message.read ? (
                           <CheckCheck className="h-4 w-4 text-emerald-500" aria-label="Mensaje visto" />
                         ) : (
                           <Clock

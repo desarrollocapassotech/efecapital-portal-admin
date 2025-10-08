@@ -22,7 +22,7 @@ export const Sidebar = () => {
 
   const unreadNotifications = notifications.filter((n) => !n.read).length;
   const newMessagesCount = messages.filter(
-    (m) => !m.isFromAdvisor && (!m.visto || m.status === 'pendiente')
+    (m) => !m.isFromAdvisor && (!m.read || m.status === 'pendiente')
   ).length;
   const displayNewMessagesCount = newMessagesCount > 99 ? '99+' : newMessagesCount;
   const hasNewMessages = newMessagesCount > 0;

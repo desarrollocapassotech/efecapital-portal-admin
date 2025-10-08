@@ -53,7 +53,7 @@ export const Messages = () => {
   }, [selectedClient]);
 
   const newMessagesCount = messages.filter(
-    (msg) => !msg.isFromAdvisor && (!msg.visto || msg.status === 'pendiente')
+    (msg) => !msg.isFromAdvisor && (!msg.read || msg.status === 'pendiente')
   ).length;
   const displayNewMessagesCount = newMessagesCount > 99 ? '99+' : newMessagesCount;
   const hasNewMessages = newMessagesCount > 0;
@@ -87,7 +87,7 @@ export const Messages = () => {
   // Verificar si hay mensajes no leídos (del cliente y no leídos)
   const hasUnreadMessages = (clientId: string) => {
     return messages.some(
-      (msg) => msg.clientId === clientId && !msg.isFromAdvisor && !msg.visto
+      (msg) => msg.clientId === clientId && !msg.isFromAdvisor && !msg.read
     );
   };
 
