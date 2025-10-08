@@ -62,6 +62,7 @@ export const Reports = () => {
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [clientSearch, setClientSearch] = useState('');
 
   const sortedDocuments = useMemo(
     () =>
@@ -74,6 +75,19 @@ export const Reports = () => {
   const totalDocuments = documents.length;
   const documentsForAll = documents.filter((doc) => doc.visibility === 'all').length;
   const documentsWithCustomAudience = totalDocuments - documentsForAll;
+
+  const filteredClients = useMemo(() => {
+    const term = clientSearch.trim().toLowerCase();
+
+    if (!term) {
+      return clients;
+    }
+
+    return clients.filter((client) => {
+      const haystack = `${client.firstName} ${client.lastName} ${client.email}`.toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [clients, clientSearch]);
 
   const handleToggleClient = (clientId: string) => {
     setSelectedClients((prev) =>
@@ -99,6 +113,7 @@ export const Reports = () => {
     setSelectedClients([]);
     setVisibility('all');
     setType('informe_mercado');
+    setClientSearch('');
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -313,14 +328,24 @@ export const Reports = () => {
                       <ListChecks className="h-4 w-4" />
                       Elige los clientes que podrán acceder al informe
                     </div>
+                    <Input
+                      value={clientSearch}
+                      onChange={(event) => setClientSearch(event.target.value)}
+                      placeholder="Buscar clientes por nombre o correo..."
+                      className="mb-3"
+                    />
                     <ScrollArea className="h-48 rounded-md border bg-muted/30 p-2">
                       <div className="space-y-2">
                         {clients.length === 0 ? (
                           <p className="text-sm text-muted-foreground">
                             No hay clientes cargados en tu cartera todavía.
                           </p>
+                        ) : filteredClients.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">
+                            No se encontraron clientes con ese criterio de búsqueda.
+                          </p>
                         ) : (
-                          clients.map((client) => {
+                          filteredClients.map((client) => {
                             const isChecked = selectedClients.includes(client.id);
                             return (
                               <label
