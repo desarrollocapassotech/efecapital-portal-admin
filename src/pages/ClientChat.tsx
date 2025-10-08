@@ -1,11 +1,9 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
   MessageCircle,
   Send,
-  Paperclip,
-  X,
   Image as ImageIcon,
   FileText,
   FileDown,
@@ -25,7 +23,6 @@ const ClientChat = () => {
   const { clients, messages, addMessage, markClientMessagesAsRead } = useDataStore();
   const [reply, setReply] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [attachments, setAttachments] = useState<File[]>([]);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const client = useMemo(() => clients.find((item) => item.id === id), [clients, id]);
@@ -75,55 +72,26 @@ const ClientChat = () => {
   }, [conversation.length]);
 
   const handleSendMessage = async () => {
-    if (!id || (!reply.trim() && attachments.length === 0)) {
+    if (!id || !reply.trim()) {
       return;
     }
 
     setIsSending(true);
     try {
-      if (reply.trim()) {
-        await addMessage({
-          clientId: id,
-          content: reply.trim(),
-          timestamp: new Date(),
-          isFromAdvisor: true,
-          status: 'respondido',
-        });
-      }
-
-      if (attachments.length > 0) {
-        for (const file of attachments) {
-          const isImage = file.type.startsWith('image/');
-          const content = `[${isImage ? 'Imagen' : 'PDF'}: ${file.name}]`;
-
-          await addMessage({
-            clientId: id,
-            content,
-            timestamp: new Date(),
-            isFromAdvisor: true,
-            status: 'respondido',
-          });
-        }
-      }
+      await addMessage({
+        clientId: id,
+        content: reply.trim(),
+        timestamp: new Date(),
+        isFromAdvisor: true,
+        status: 'respondido',
+      });
 
       setReply('');
-      setAttachments([]);
     } catch (error) {
       console.error('Error al enviar el mensaje', error);
     } finally {
       setIsSending(false);
     }
-  };
-
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files) {
-      const files = Array.from(event.target.files);
-      setAttachments((previous) => [...previous, ...files]);
-    }
-  };
-
-  const removeAttachment = (index: number) => {
-    setAttachments((previous) => previous.filter((_, idx) => idx !== index));
   };
 
   const handleGoBack = () => {
@@ -266,44 +234,7 @@ const ClientChat = () => {
           </div>
 
           <div className="space-y-3 border-t pt-4">
-            {attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 rounded bg-muted p-2">
-                {attachments.map((file, index) => (
-                  <div
-                    key={`${file.name}-${index}`}
-                    className="flex items-center gap-1 rounded border bg-background px-2 py-1 text-sm"
-                  >
-                    {file.type.startsWith('image/') ? (
-                      <ImageIcon className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <FileText className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    <span className="max-w-xs truncate">{file.name}</span>
-                    <button
-                      type="button"
-                      onClick={() => removeAttachment(index)}
-                      className="text-destructive hover:text-red-700"
-                      aria-label={`Eliminar ${file.name}`}
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
             <div className="flex items-end gap-2">
-              <label className="cursor-pointer rounded p-2 hover:bg-muted" aria-label="Adjuntar archivo">
-                <Paperclip className="h-5 w-5 text-muted-foreground" />
-                <input
-                  type="file"
-                  multiple
-                  accept=".pdf,image/*"
-                  className="hidden"
-                  onChange={handleFileChange}
-                />
-              </label>
-
               <Textarea
                 value={reply}
                 onChange={(event) => setReply(event.target.value)}
@@ -320,7 +251,7 @@ const ClientChat = () => {
 
               <Button
                 onClick={handleSendMessage}
-                disabled={isSending || (!reply.trim() && attachments.length === 0)}
+                disabled={isSending || !reply.trim()}
                 size="icon"
                 aria-label="Enviar mensaje"
               >
@@ -329,8 +260,7 @@ const ClientChat = () => {
             </div>
 
             <p className="text-xs text-muted-foreground">
-              Puedes adjuntar PDFs o imágenes. Presiona{' '}
-              <kbd className="rounded border bg-background px-1">Enter</kbd> para enviar.
+              Presiona <kbd className="rounded border bg-background px-1">Enter</kbd> para enviar.
             </p>
           </div>
         </CardContent>
