@@ -165,9 +165,9 @@ export const Messages = () => {
             )}
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Centro de Mensajes</h1>
+            <h1 className="text-3xl font-bold text-foreground">Mensajes</h1>
             <p className="text-muted-foreground">
-              Gestiona todas las comunicaciones con tus clientes
+              Todas las conversaciones con tus clientes.
             </p>
           </div>
         </div>
@@ -220,8 +220,9 @@ export const Messages = () => {
                     const clientMessages = messages.filter((m) => m.clientId === client.id);
                     const latestMessage = clientMessages[0];
                     return (
-                      <div
+                      <Link
                         key={client.id}
+                        to={`/messages/${client.id}`}
                         className="rounded-lg border border-border/60 bg-background/80 transition-colors hover:bg-muted/40"
                       >
                         <div className="flex flex-col gap-3 p-4">
@@ -263,27 +264,18 @@ export const Messages = () => {
                               </div>
                             </div>
 
-                            {/* Acciones */}
                             <div className="flex items-center justify-between gap-3 lg:justify-end">
                               {latestMessage && (
                                 <div className="text-xs text-muted-foreground">
-                                  {format(new Date(latestMessage.timestamp), 'dd MMM HH:mm', {
+                                  Ultimo mensaje: {format(new Date(latestMessage.timestamp), 'dd MMM HH:mm', {
                                     locale: es,
                                   })}
                                 </div>
                               )}
-                              <div className="flex items-center gap-2">
-                                <Button asChild variant="ghost" size="sm">
-                                  <Link to={`/clients/${client.id}`}>Ver detalle</Link>
-                                </Button>
-                                <Button asChild size="sm">
-                                  <Link to={`/messages/${client.id}`}>Abrir chat</Link>
-                                </Button>
-                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
@@ -352,8 +344,8 @@ export const Messages = () => {
                         {selectedClientNotes.map((note, index) => {
                           const originalIndex = Array.isArray(selectedClient.notes)
                             ? selectedClient.notes.findIndex(
-                                (item) => item.date === note.date && item.text === note.text
-                              )
+                              (item) => item.date === note.date && item.text === note.text
+                            )
                             : -1;
                           const isEditing =
                             editingNote !== null &&
