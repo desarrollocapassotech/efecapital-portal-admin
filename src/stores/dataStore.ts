@@ -222,8 +222,11 @@ export const useDataStore = create<DataStore>((set, get) => {
           const documents = snapshot.docs.map((docSnapshot) => {
             const data = docSnapshot.data();
             const rawClientIds = Array.isArray(data.clientIds)
-              ? (data.clientIds as string[])
+              ? (data.clientIds as unknown[]).filter(
+                  (clientId): clientId is string => typeof clientId === 'string'
+                )
               : [];
+            const normalizedClientIds = Array.from(new Set(rawClientIds));
 
             return {
               id: docSnapshot.id,
@@ -235,10 +238,7 @@ export const useDataStore = create<DataStore>((set, get) => {
               fileUrl: data.fileUrl ?? '',
               storagePath: data.storagePath ?? '',
               visibility: (data.visibility ?? 'all') as Document['visibility'],
-              clientIds:
-                data.visibility === 'selected'
-                  ? Array.from(new Set(rawClientIds))
-                  : [],
+              clientIds: normalizedClientIds,
             } satisfies Document;
           });
 
@@ -380,10 +380,6 @@ export const useDataStore = create<DataStore>((set, get) => {
         activities: state.activities.filter((activity) => activity.clientId !== id),
         documents: state.documents
           .map((document) => {
-            if (document.visibility === 'all') {
-              return document;
-            }
-
             if (!document.clientIds.includes(id)) {
               return document;
             }
@@ -488,10 +484,17 @@ export const useDataStore = create<DataStore>((set, get) => {
     },
 
     addDocument: async (documentData) => {
-      const normalizedClientIds =
-        documentData.visibility === 'selected'
-          ? Array.from(new Set(documentData.clientIds))
-          : [];
+      const allClientIds = get()
+        .clients
+        .map((client) => client.id);
+
+      const normalizedClientIds = Array.from(
+        new Set(
+          documentData.visibility === 'selected'
+            ? documentData.clientIds
+            : allClientIds
+        )
+      );
 
       const uploadDate = new Date();
       const storagePath = `reports/${Date.now()}-${documentData.file.name}`;
@@ -534,11 +537,11 @@ export const useDataStore = create<DataStore>((set, get) => {
         }));
 
         const targetClients =
-          newDocument.visibility === 'all'
-            ? get().clients
-            : get().clients.filter((client) =>
+          newDocument.clientIds.length > 0
+            ? get().clients.filter((client) =>
                 newDocument.clientIds.includes(client.id)
-              );
+              )
+            : get().clients;
 
         targetClients.forEach((client) => {
           get().addActivity({
