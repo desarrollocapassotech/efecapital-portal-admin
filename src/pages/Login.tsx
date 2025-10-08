@@ -72,11 +72,13 @@ export const Login = () => {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="text-center space-y-4">
-          <div className="mx-auto w-16 h-16 bg-primary rounded-xl flex items-center justify-center">
-            <TrendingUp className="h-8 w-8 text-primary-foreground" />
-          </div>
           <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold text-foreground">EFECapital</CardTitle>
+            <CardTitle className="text-2xl font-bold text-foreground center flex justify-center">
+              <div className="backdrop-blur-sm p-4">
+                <img src="logo11.png" alt="Logo" className='w-24' />
+              </div>
+            </CardTitle>
+
             <p className="text-muted-foreground">Panel de Administrador</p>
           </div>
         </CardHeader>
@@ -139,10 +141,6 @@ export const Login = () => {
               {isSubmitting ? 'Verificando...' : 'Iniciar Sesión'}
             </Button>
           </form>
-
-          <div className="mt-6 p-4 bg-muted rounded-lg text-sm text-muted-foreground text-center">
-            Ingresa con las credenciales configuradas en Firebase Authentication.
-          </div>
         </CardContent>
       </Card>
     </div>
