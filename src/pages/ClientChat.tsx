@@ -9,8 +9,8 @@ import {
   Image as ImageIcon,
   FileText,
   FileDown,
+  Check,
   CheckCheck,
-  Clock,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -226,10 +226,7 @@ const ClientChat = () => {
                         {message.read ? (
                           <CheckCheck className="h-4 w-4 text-emerald-500" aria-label="Mensaje visto" />
                         ) : (
-                          <Clock
-                            className="h-4 w-4 text-muted-foreground"
-                            aria-label="Mensaje pendiente de lectura"
-                          />
+                          <Check className="h-4 w-4 text-muted-foreground" aria-label="Mensaje enviado" />
                         )}
                       </div>
                     </div>
