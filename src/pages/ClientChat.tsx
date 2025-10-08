@@ -175,7 +175,7 @@ const ClientChat = () => {
         </Button>
       </div>
 
-      <Card className="flex max-w-4xl flex-1 flex-col">
+      <Card className="flex flex-1 flex-col">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div className="flex items-center gap-2">
             <MessageCircle className="h-5 w-5 text-primary" />
