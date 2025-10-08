@@ -75,6 +75,9 @@ interface AddDocumentInput {
   file: File;
 }
 
+const collectionKeys = ['clients', 'messages', 'brokers', 'documents'] as const;
+type CollectionKey = (typeof collectionKeys)[number];
+
 interface DataStore {
   clients: Client[];
   brokers: Broker[];
@@ -82,6 +85,7 @@ interface DataStore {
   documents: Document[];
   activities: Activity[];
   notifications: Notification[];
+  isLoading: boolean;
 
   startDataListeners: () => void;
   stopDataListeners: () => void;
@@ -111,6 +115,36 @@ export const useDataStore = create<DataStore>((set, get) => {
   let brokersUnsubscribe: Unsubscribe | null = null;
   let documentsUnsubscribe: Unsubscribe | null = null;
 
+  const collectionsLoaded: Record<CollectionKey, boolean> = {
+    clients: false,
+    messages: false,
+    brokers: false,
+    documents: false,
+  };
+
+  const resetLoadingState = () => {
+    for (const key of collectionKeys) {
+      collectionsLoaded[key] = false;
+    }
+    set({ isLoading: true });
+  };
+
+  const markCollectionAsLoaded = (collection: CollectionKey) => {
+    if (collectionsLoaded[collection]) {
+      return;
+    }
+
+    collectionsLoaded[collection] = true;
+
+    const allCollectionsLoaded = collectionKeys.every(
+      (key) => collectionsLoaded[key]
+    );
+
+    if (allCollectionsLoaded) {
+      set({ isLoading: false });
+    }
+  };
+
   return {
     clients: [],
     brokers: [],
@@ -118,8 +152,19 @@ export const useDataStore = create<DataStore>((set, get) => {
     documents: [],
     activities: [],
     notifications: [],
+    isLoading: false,
 
     startDataListeners: () => {
+      const shouldResetLoading =
+        !clientsUnsubscribe ||
+        !messagesUnsubscribe ||
+        !brokersUnsubscribe ||
+        !documentsUnsubscribe;
+
+      if (shouldResetLoading) {
+        resetLoadingState();
+      }
+
       if (!clientsUnsubscribe) {
         const clientsQuery = query(
           collection(db, 'clients'),
@@ -151,6 +196,7 @@ export const useDataStore = create<DataStore>((set, get) => {
           });
 
           set({ clients });
+          markCollectionAsLoaded('clients');
         });
       }
 
@@ -186,6 +232,7 @@ export const useDataStore = create<DataStore>((set, get) => {
             );
 
           set({ messages });
+          markCollectionAsLoaded('messages');
         });
       }
 
@@ -208,6 +255,7 @@ export const useDataStore = create<DataStore>((set, get) => {
           });
 
           set({ brokers });
+          markCollectionAsLoaded('brokers');
         });
       }
 
@@ -242,6 +290,7 @@ export const useDataStore = create<DataStore>((set, get) => {
           });
 
           set({ documents });
+          markCollectionAsLoaded('documents');
         });
       }
     },
@@ -271,6 +320,7 @@ export const useDataStore = create<DataStore>((set, get) => {
         documents: [],
         activities: [],
         notifications: [],
+        isLoading: false,
       });
     },
 
