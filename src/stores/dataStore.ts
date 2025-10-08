@@ -164,9 +164,9 @@ export const useDataStore = create<DataStore>((set, get) => {
           const messages = snapshot.docs
             .map((docSnapshot) => {
               const data = docSnapshot.data();
-              const visto =
-                typeof data.visto === 'boolean'
-                  ? data.visto
+              const read =
+                typeof data.read === 'boolean'
+                  ? data.read
                   : typeof data.read === 'boolean'
                     ? data.read
                     : Boolean(data.isFromAdvisor);
@@ -178,7 +178,7 @@ export const useDataStore = create<DataStore>((set, get) => {
                 timestamp: toDate(data.timestamp),
                 isFromAdvisor: Boolean(data.isFromAdvisor),
                 status: (data.status ?? 'pendiente') as Message['status'],
-                read: visto,
+                read: read,
               } satisfies Message;
             })
             .sort(
@@ -394,13 +394,6 @@ export const useDataStore = create<DataStore>((set, get) => {
     },
 
     addMessage: async (messageData) => {
-      const visto =
-        typeof messageData.read === 'boolean'
-          ? messageData.read
-          : messageData.isFromAdvisor
-            ? true
-            : false;
-
       await addDoc(collection(db, 'messages'), {
         clientId: messageData.clientId,
         content: messageData.content,
@@ -409,8 +402,7 @@ export const useDataStore = create<DataStore>((set, get) => {
           : serverTimestamp(),
         isFromAdvisor: messageData.isFromAdvisor,
         status: messageData.status ?? 'pendiente',
-        visto,
-        read: visto,
+        read: false,
       });
 
       const clientRef = doc(db, 'clients', messageData.clientId);
@@ -444,7 +436,7 @@ export const useDataStore = create<DataStore>((set, get) => {
     },
 
     markMessageAsRead: async (id) => {
-      await updateDoc(doc(db, 'messages', id), { visto: true, read: true });
+      await updateDoc(doc(db, 'messages', id), { read: true });
     },
 
     markClientMessagesAsRead: async (clientId) => {
@@ -461,14 +453,14 @@ export const useDataStore = create<DataStore>((set, get) => {
 
       const unseenMessages = snapshot.docs.filter((messageDoc) => {
         const data = messageDoc.data();
-        const visto =
-          typeof data.visto === 'boolean'
-            ? data.visto
+        const read =
+          typeof data.read === 'boolean'
+            ? data.read
             : typeof data.read === 'boolean'
               ? data.read
               : false;
 
-        return !visto;
+        return !read;
       });
 
       if (unseenMessages.length === 0) {
@@ -477,7 +469,7 @@ export const useDataStore = create<DataStore>((set, get) => {
 
       const batch = writeBatch(db);
       unseenMessages.forEach((messageDoc) => {
-        batch.update(messageDoc.ref, { visto: true, read: true });
+        batch.update(messageDoc.ref, { read: true });
       });
       await batch.commit();
     },

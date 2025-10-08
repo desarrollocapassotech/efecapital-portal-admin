@@ -53,7 +53,7 @@ export const Messages = () => {
   }, [selectedClient]);
 
   const newMessagesCount = messages.filter(
-    (msg) => !msg.isFromAdvisor && (!msg.read || msg.status === 'pendiente')
+    (msg) => !msg.isFromAdvisor && (!msg.read)
   ).length;
   const displayNewMessagesCount = newMessagesCount > 99 ? '99+' : newMessagesCount;
   const hasNewMessages = newMessagesCount > 0;
