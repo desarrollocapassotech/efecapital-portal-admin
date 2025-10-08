@@ -73,11 +73,10 @@ export const Sidebar = () => {
             className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center space-x-2"
             onClick={() => setIsSidebarOpen(false)}
           >
-            <div className="p-1.5 bg-primary rounded-lg">
-              <TrendingUp className="h-5 w-5 text-primary-foreground" />
+            <div className="p-1.5 rounded-lg">
+              <img src="logo11.png" alt="Logo" className='w-12' />
             </div>
             <div className="text-center">
-              <h1 className="text-base font-semibold text-foreground">EFECapital</h1>
               <p className="text-xs text-muted-foreground">Panel de Administrador</p>
             </div>
           </Link>
@@ -118,11 +117,10 @@ export const Sidebar = () => {
               to="/clients"
               className="flex items-center space-x-3"
             >
-              <div className="p-2 bg-primary rounded-lg">
-                <TrendingUp className="h-6 w-6 text-primary-foreground" />
+              <div className="p-2 rounded-lg">
+                <img src="logo11.png" alt="Logo" />
               </div>
               <div>
-                <h1 className="text-lg font-semibold text-foreground">EFECapital</h1>
                 <p className="text-sm text-muted-foreground">Panel de Administrador</p>
               </div>
             </Link>

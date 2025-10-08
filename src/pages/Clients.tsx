@@ -159,20 +159,6 @@ export const Clients = () => {
                       <div><strong>Teléfono:</strong> {client.phone}</div>
                       <div><strong>Broker:</strong> {client.broker}</div>
 
-                      {/* Estadísticas */}
-                      <div className="flex gap-2 mt-2 text-xs">
-                        {stats.pendingMessages > 0 && (
-                          <Badge variant="destructive">
-                            <MessageCircle className="h-3 w-3 mr-1" />
-                            {stats.pendingMessages} pendiente(s)
-                          </Badge>
-                        )}
-                        <Badge variant="secondary">
-                          <FileText className="h-3 w-3 mr-1" />
-                          {stats.totalDocuments} doc(s)
-                        </Badge>
-                      </div>
-
                       {/* Acciones */}
                       <div className="flex justify-end space-x-2 pt-3">
                         <Button
