@@ -138,7 +138,10 @@ export const Reports = () => {
         description,
         type,
         visibility,
-        clientIds: visibility === 'selected' ? selectedClients : [],
+        clientIds:
+          visibility === 'selected'
+            ? selectedClients
+            : clients.map((client) => client.id),
         file: selectedFile,
       });
 
