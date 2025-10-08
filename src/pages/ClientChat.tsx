@@ -132,7 +132,7 @@ const ClientChat = () => {
 
   if (!client) {
     return (
-      <div className="flex-1 p-6 pt-16 lg:pt-0">
+      <div className="flex-1 p-6 pt-16 lg:pt-6">
         <Card className="mx-auto max-w-2xl">
           <CardHeader>
             <CardTitle>Chat no disponible</CardTitle>
@@ -150,7 +150,7 @@ const ClientChat = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-0">
+    <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-start gap-4">
           <Button variant="ghost" size="icon" onClick={handleGoBack} className="hidden lg:inline-flex">

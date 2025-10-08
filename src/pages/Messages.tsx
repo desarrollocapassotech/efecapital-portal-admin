@@ -149,7 +149,7 @@ export const Messages = () => {
   };
 
   return (
-    <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-0">
+    <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-start gap-3">
