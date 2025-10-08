@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, MessageCircle, FileText } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MessageCircle, FileText, Eye } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -147,7 +147,6 @@ export const Clients = () => {
                             <div className="font-medium">
                               {client.firstName} {client.lastName}
                             </div>
-                            <div className="text-sm text-muted-foreground">ID: {client.id}</div>
                           </div>
                         </div>
                         <Badge variant="outline" className={getProfileColor(client.investorProfile)}>
@@ -190,7 +189,7 @@ export const Clients = () => {
                           size="sm"
                           onClick={() => navigate(`/clients/${client.id}`)}
                         >
-                          Ver
+                          <Eye className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
@@ -240,8 +239,6 @@ export const Clients = () => {
                     <TableHead>Contacto</TableHead>
                     <TableHead>Perfil</TableHead>
                     <TableHead>Broker</TableHead>
-                    <TableHead className="text-center">Mensajes</TableHead>
-                    <TableHead className="text-center">Documentos</TableHead>
                     <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -261,9 +258,6 @@ export const Clients = () => {
                             <div>
                               <div className="font-medium">
                                 {client.firstName} {client.lastName}
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                ID: {client.id}
                               </div>
                             </div>
                           </div>
@@ -286,29 +280,6 @@ export const Clients = () => {
                           {client.broker}
                         </TableCell>
                         
-                        <TableCell className="text-center">
-                          <div className="flex justify-center">
-                            {stats.pendingMessages > 0 ? (
-                              <Badge variant="destructive" className="gap-1">
-                                <MessageCircle className="h-3 w-3" />
-                                {stats.pendingMessages} pendiente(s)
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="gap-1 text-muted-foreground">
-                                <MessageCircle className="h-3 w-3" />
-                                Sin pendientes
-                              </Badge>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="flex justify-center">
-                            <Badge variant="secondary" className="gap-1">
-                              <FileText className="h-3 w-3" />
-                              {stats.totalDocuments} doc(s)
-                            </Badge>
-                          </div>
-                        </TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
                             <Button
@@ -325,7 +296,7 @@ export const Clients = () => {
                               size="sm"
                               onClick={() => navigate(`/clients/${client.id}`)}
                             >
-                              Ver
+                              <Eye className="h-4 w-4" />
                             </Button>
                             <Button
                               variant="outline"
