@@ -26,6 +26,7 @@ import {
   Note,
   Notification,
 } from '@/types';
+import { notificationService } from '@/lib/notifications';
 
 const toDate = (value: unknown): Date => {
   if (value instanceof Timestamp) {
@@ -469,6 +470,7 @@ export const useDataStore = create<DataStore>((set, get) => {
       if (!messageData.isFromAdvisor) {
         const client = get().clients.find((c) => c.id === messageData.clientId);
         if (client) {
+          // Agregar notificación interna
           get().addNotification({
             title: `Nuevo mensaje de ${client.firstName} ${client.lastName}`,
             message: messageData.content.substring(0, 100),
@@ -476,6 +478,15 @@ export const useDataStore = create<DataStore>((set, get) => {
             read: false,
             type: 'mensaje',
             clientId: client.id,
+          });
+
+          // Mostrar notificación push del navegador
+          notificationService.showMessageNotification(
+            `${client.firstName} ${client.lastName}`,
+            messageData.content,
+            client.id
+          ).catch((error) => {
+            console.warn('No se pudo mostrar la notificación push:', error);
           });
         }
       }
@@ -600,6 +611,14 @@ export const useDataStore = create<DataStore>((set, get) => {
             read: false,
             type: 'informe',
             clientId: client.id,
+          });
+
+          // Mostrar notificación push del navegador para documentos
+          notificationService.showDocumentNotification(
+            newDocument.name,
+            newDocument.description
+          ).catch((error) => {
+            console.warn('No se pudo mostrar la notificación push de documento:', error);
           });
         });
       } catch (error) {

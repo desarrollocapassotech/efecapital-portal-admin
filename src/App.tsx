@@ -13,14 +13,19 @@ import { Messages } from "./pages/Messages";
 import ClientChat from "./pages/ClientChat";
 import { Reports } from "./pages/Reports";
 import NotFound from "./pages/NotFound";
+import Index from "./pages/Index";
 import { useAuthStore } from "@/stores/authStore";
 import { useDataStore } from "@/stores/dataStore";
+import { useNotificationSetup } from "@/hooks/useNotificationSetup";
 
 const queryClient = new QueryClient();
 
 const App = () => {
   const initializeAuth = useAuthStore((state) => state.initializeAuth);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  
+  // Configurar notificaciones push
+  useNotificationSetup();
 
   useEffect(() => {
     const unsubscribe = initializeAuth();
@@ -52,7 +57,7 @@ const App = () => {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Layout />}>
-              <Route index element={<Navigate to="clients" replace />} />
+              <Route index element={<Index />} />
               <Route path="clients" element={<Clients />} />
               <Route path="clients/:id" element={<ClientDetail />} />
               <Route path="clients/:id/edit" element={<ClientForm />} />
