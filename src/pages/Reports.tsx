@@ -1,6 +1,16 @@
 import { useMemo, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
-import { Upload, Users, ListChecks, FileText, Trash2 } from 'lucide-react';
+import { 
+  Upload, 
+  Users, 
+  ListChecks, 
+  FileText, 
+  Trash2, 
+  BarChart3, 
+  Plus,
+  FileSpreadsheet,
+  FileImage
+} from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -30,7 +40,7 @@ import { useToast } from '@/hooks/use-toast';
 import type { Document } from '@/types';
 
 const documentTypeLabels: Record<Document['type'], string> = {
-  rendimiento: 'Rendimiento de cartera',
+  rendimiento: 'Seguimiento de cartera',
   recomendaciones: 'Recomendaciones personalizadas',
   informe_mercado: 'Informe de mercado',
 };
@@ -51,6 +61,24 @@ const formatFileSize = (size: number) => {
   return `${value.toFixed(value >= 10 ? 0 : 1)} ${units[exponent]}`;
 };
 
+const getFileIcon = (fileName: string) => {
+  const extension = fileName.split('.').pop()?.toLowerCase();
+  switch (extension) {
+    case 'pdf':
+      return <FileText className="h-4 w-4 text-red-500" />;
+    case 'xlsx':
+    case 'xls':
+      return <FileSpreadsheet className="h-4 w-4 text-green-500" />;
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+      return <FileImage className="h-4 w-4 text-blue-500" />;
+    default:
+      return <FileText className="h-4 w-4 text-gray-500" />;
+  }
+};
+
+
 export const Reports = () => {
   const { clients, documents, addDocument, deleteDocument } = useDataStore();
   const { toast } = useToast();
@@ -64,17 +92,6 @@ export const Reports = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
 
-  const sortedDocuments = useMemo(
-    () =>
-      [...documents].sort(
-        (a, b) => b.uploadDate.getTime() - a.uploadDate.getTime()
-      ),
-    [documents]
-  );
-
-  const totalDocuments = documents.length;
-  const documentsForAll = documents.filter((doc) => doc.visibility === 'all').length;
-  const documentsWithCustomAudience = totalDocuments - documentsForAll;
 
   const filteredClients = useMemo(() => {
     const term = clientSearch.trim().toLowerCase();
@@ -205,6 +222,7 @@ export const Reports = () => {
 
   return (
     <div className="flex-1 space-y-6 p-6 pt-16 lg:pt-6">
+      {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-3xl font-bold text-foreground">Gestión de Informes</h1>
@@ -212,21 +230,36 @@ export const Reports = () => {
             Publica informes para toda tu cartera o elige clientes específicos.
           </p>
         </div>
+        <div className="flex gap-2">
+          <Button variant="outline" asChild>
+            <a href="/reports/history">
+              <BarChart3 className="mr-2 h-4 w-4" />
+              Ver Historial
+            </a>
+          </Button>
+          <Button onClick={() => document.getElementById('upload-form')?.scrollIntoView({ behavior: 'smooth' })}>
+            <Plus className="mr-2 h-4 w-4" />
+            Nuevo Informe
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <div>
-              <CardTitle>Nuevo informe</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Adjunta el archivo, define los destinatarios y comparte la actualización.
-              </p>
-            </div>
-            <div className="rounded-full bg-primary/10 p-2 text-primary">
+      {/* Formulario de subida mejorado */}
+      <Card id="upload-form">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2">
               <Upload className="h-5 w-5" />
-            </div>
-          </CardHeader>
+              Nuevo informe
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Adjunta el archivo, define los destinatarios y comparte la actualización.
+            </p>
+          </div>
+          <div className="rounded-full bg-primary/10 p-2 text-primary">
+            <FileText className="h-5 w-5" />
+          </div>
+        </CardHeader>
           <CardContent>
             <form className="space-y-6" onSubmit={handleSubmit}>
               <div className="grid gap-4 sm:grid-cols-2">
@@ -269,11 +302,33 @@ export const Reports = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="report-file">Archivo</Label>
-                <Input id="report-file" type="file" onChange={handleFileChange} />
+                <div className="relative">
+                  <Input 
+                    id="report-file" 
+                    type="file" 
+                    onChange={handleFileChange}
+                    className="cursor-pointer"
+                    accept=".pdf,.xlsx,.xls,.png,.jpg,.jpeg"
+                  />
+                </div>
                 {selectedFile && (
-                  <p className="text-sm text-muted-foreground">
-                    {selectedFile.name} · {formatFileSize(selectedFile.size)}
-                  </p>
+                  <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                    {getFileIcon(selectedFile.name)}
+                    <div className="flex-1">
+                      <p className="font-medium text-sm">{selectedFile.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatFileSize(selectedFile.size)}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedFile(null)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 )}
               </div>
 
@@ -390,146 +445,6 @@ export const Reports = () => {
             </form>
           </CardContent>
         </Card>
-
-        <Card className="h-full">
-          <CardHeader className="space-y-1">
-            <CardTitle>Resumen de informes</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Vista rápida del estado actual de los informes compartidos.
-            </p>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border bg-muted/30 p-4">
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-primary/10 p-2 text-primary">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Informes publicados</p>
-                  <p className="text-2xl font-semibold">{totalDocuments}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-3">
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <Users className="h-4 w-4 text-primary" />
-                  Disponible para todos los clientes
-                </div>
-                <Badge variant="secondary">{documentsForAll}</Badge>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="flex items-center gap-2 text-sm">
-                  <ListChecks className="h-4 w-4 text-primary" />
-                  Con destinatarios personalizados
-                </div>
-                <Badge variant="secondary">{documentsWithCustomAudience}</Badge>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
-              Comparte informes generales con toda tu cartera y utiliza la distribución
-              personalizada para compartir recomendaciones específicas con determinados clientes.
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Historial de informes compartidos</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {sortedDocuments.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-10 text-center text-muted-foreground">
-              <Upload className="h-10 w-10" />
-              <div>
-                <p className="font-medium text-foreground">Todavía no has compartido informes.</p>
-                <p className="text-sm">
-                  Publica tu primer informe para visualizarlo en este listado.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Informe</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Publicado</TableHead>
-                    <TableHead>Destinatarios</TableHead>
-                    <TableHead>Tamaño</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedDocuments.map((document) => {
-                    const audienceLabel = visibilityLabels[document.visibility];
-                    const clientNames = document.clientIds.map(getClientName);
-                    const recipientsText =
-                      document.visibility === 'all'
-                        ? 'Todos los clientes'
-                        : clientNames.length > 0
-                          ? clientNames.join(', ')
-                          : 'Clientes eliminados';
-
-                    return (
-                      <TableRow key={document.id}>
-                        <TableCell>
-                          <div className="space-y-1">
-                            <a
-                              href={document.fileUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="font-medium text-primary hover:underline"
-                            >
-                              {document.name}
-                            </a>
-                            {document.description && (
-                              <p className="text-sm text-muted-foreground line-clamp-2">
-                                {document.description}
-                              </p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{documentTypeLabels[document.type]}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {new Intl.DateTimeFormat('es-ES', {
-                            dateStyle: 'medium',
-                            timeStyle: 'short',
-                          }).format(document.uploadDate)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="space-y-1 text-sm">
-                            <p>{audienceLabel}</p>
-                            <p className="text-xs text-muted-foreground">{recipientsText}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell>{formatFileSize(document.size)}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => void handleDelete(document.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                            <span className="sr-only">Eliminar informe</span>
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 };

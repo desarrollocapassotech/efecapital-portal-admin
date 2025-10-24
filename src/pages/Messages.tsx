@@ -166,9 +166,6 @@ export const Messages = () => {
           </div>
           <div>
             <h1 className="text-3xl font-bold text-foreground">Mensajes</h1>
-            <p className="text-muted-foreground">
-              Todas las conversaciones con tus clientes.
-            </p>
           </div>
         </div>
         {hasNewMessages && (

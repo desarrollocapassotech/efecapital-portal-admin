@@ -12,6 +12,7 @@ import { ClientForm } from "./pages/ClientForm";
 import { Messages } from "./pages/Messages";
 import ClientChat from "./pages/ClientChat";
 import { Reports } from "./pages/Reports";
+import ReportsHistory from "./pages/ReportsHistory";
 import NotFound from "./pages/NotFound";
 import Index from "./pages/Index";
 import { useAuthStore } from "@/stores/authStore";
@@ -65,6 +66,7 @@ const App = () => {
               <Route path="messages" element={<Messages />} />
               <Route path="messages/:id" element={<ClientChat />} />
               <Route path="reports" element={<Reports />} />
+              <Route path="reports/history" element={<ReportsHistory />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
