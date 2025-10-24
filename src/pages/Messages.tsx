@@ -149,23 +149,23 @@ export const Messages = () => {
   };
 
   return (
-    <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-6">
+    <div className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 pt-16 lg:pt-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-3">
           <div className="relative lg:hidden">
-            <MessageCircle className="h-10 w-10 text-primary" />
+            <MessageCircle className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
             {hasNewMessages && (
               <Badge
                 variant="destructive"
-                className="absolute -top-1 -right-1 h-6 min-w-[1.5rem] px-1 text-xs leading-none flex items-center justify-center"
+                className="absolute -top-1 -right-1 h-5 w-5 sm:h-6 sm:min-w-[1.5rem] px-1 text-xs leading-none flex items-center justify-center"
               >
                 {displayNewMessagesCount}
               </Badge>
             )}
           </div>
           <div>
-            <h1 className="text-3xl font-bold text-foreground">Mensajes</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Mensajes</h1>
           </div>
         </div>
         {hasNewMessages && (
@@ -184,14 +184,14 @@ export const Messages = () => {
         <TabsContent value="messages" className="space-y-6">
           {/* Search Bar */}
           <Card>
-            <CardContent className="pt-6">
+            <CardContent className="pt-4 sm:pt-6">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Buscar cliente..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 text-sm sm:text-base"
                 />
               </div>
             </CardContent>
@@ -222,41 +222,41 @@ export const Messages = () => {
                         to={`/messages/${client.id}`}
                         className="rounded-lg border border-border/60 bg-background/80 transition-colors hover:bg-muted/40"
                       >
-                        <div className="flex flex-col gap-3 p-4">
+                        <div className="flex flex-col gap-3 p-3 sm:p-4">
                           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-3 sm:gap-4">
                               {/* Avatar con indicador de no leído */}
                               <div className="relative">
-                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-                                  <span className="text-base font-medium text-primary-foreground">
+                                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-primary">
+                                  <span className="text-sm sm:text-base font-medium text-primary-foreground">
                                     {client.firstName[0]}
                                     {client.lastName[0]}
                                   </span>
                                 </div>
                                 {hasUnreadMessages(client.id) && (
-                                  <span className="absolute -top-1 -right-1 block h-3 w-3 rounded-full bg-red-500 ring-2 ring-background"></span>
+                                  <span className="absolute -top-1 -right-1 block h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-red-500 ring-2 ring-background"></span>
                                 )}
                               </div>
 
                               {/* Información del cliente */}
-                              <div className="min-w-0 space-y-1">
+                              <div className="min-w-0 space-y-1 flex-1">
                                 <div className="flex items-center gap-2">
                                   <Link
                                     to={`/messages/${client.id}`}
-                                    className="font-semibold text-foreground transition-colors hover:text-primary"
+                                    className="font-semibold text-sm sm:text-base text-foreground transition-colors hover:text-primary"
                                   >
                                     {client.firstName} {client.lastName}
                                   </Link>
                                   {hasUnreadMessages(client.id) && (
-                                    <span className="inline-block h-2 w-2 rounded-full bg-red-500"></span>
+                                    <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-red-500"></span>
                                   )}
                                 </div>
                                 {latestMessage ? (
-                                  <p className="line-clamp-1 text-sm text-muted-foreground">
+                                  <p className="line-clamp-1 text-xs sm:text-sm text-muted-foreground">
                                     {latestMessage.content}
                                   </p>
                                 ) : (
-                                  <p className="text-sm text-muted-foreground">Sin mensajes</p>
+                                  <p className="text-xs sm:text-sm text-muted-foreground">Sin mensajes</p>
                                 )}
                               </div>
                             </div>

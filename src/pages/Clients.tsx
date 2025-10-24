@@ -6,13 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
 import {
   AlertDialog,
@@ -75,7 +75,7 @@ export const Clients = () => {
       (document) => document.visibility === 'all' || document.clientIds.includes(clientId)
     );
     const pendingMessages = clientMessages.filter(m => m.status === 'pendiente' && !m.isFromAdvisor);
-    
+
     return {
       totalMessages: clientMessages.length,
       pendingMessages: pendingMessages.length,
@@ -84,16 +84,13 @@ export const Clients = () => {
   };
 
   return (
-    <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-6">
+    <div className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 pt-16 lg:pt-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-foreground">Gestión de Clientes</h1>
-          <p className="text-muted-foreground">
-            Administra la información de tus clientes
-          </p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Gestión de Clientes</h1>
         </div>
-        <Button asChild>
+        <Button asChild className="w-full sm:w-auto">
           <Link to="/clients/new">
             <Plus className="h-4 w-4 mr-2" />
             Nuevo Cliente
@@ -103,14 +100,14 @@ export const Clients = () => {
 
       {/* Search */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-4 sm:pt-6">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar clientes por nombre, email o perfil..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+              className="pl-10 text-sm sm:text-base"
             />
           </div>
         </CardContent>
@@ -160,29 +157,31 @@ export const Clients = () => {
                       <div><strong>Broker:</strong> {client.broker}</div>
 
                       {/* Acciones */}
-                      <div className="flex justify-end space-x-2 pt-3">
+                      <div className="flex flex-wrap justify-end gap-2 pt-3">
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => navigate(`/messages/${client.id}`)}
-                          className="gap-1"
+                          className="gap-1 text-xs sm:text-sm"
                         >
-                          <MessageCircle className="h-4 w-4" />
-                          Chat
+                          <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                          <span className="hidden xs:inline">Chat</span>
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => navigate(`/clients/${client.id}`)}
+                          className="text-xs sm:text-sm"
                         >
-                          <Eye className="h-4 w-4" />
+                          <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="sm"
                           onClick={() => navigate(`/clients/${client.id}/edit`)}
+                          className="text-xs sm:text-sm"
                         >
-                          <Edit className="h-4 w-4" />
+                          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -194,7 +193,7 @@ export const Clients = () => {
                             <AlertDialogHeader>
                               <AlertDialogTitle>¿Eliminar cliente?</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Esta acción no se puede deshacer. Se eliminarán todos los datos 
+                                Esta acción no se puede deshacer. Se eliminarán todos los datos
                                 del cliente incluyendo mensajes, documentos y actividades.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
@@ -231,7 +230,7 @@ export const Clients = () => {
                 <TableBody>
                   {filteredClients.map((client) => {
                     const stats = getClientStats(client.id);
-                    
+
                     return (
                       <TableRow key={client.id}>
                         <TableCell>
@@ -255,8 +254,8 @@ export const Clients = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge 
-                            variant="outline" 
+                          <Badge
+                            variant="outline"
                             className={getProfileColor(client.investorProfile)}
                           >
                             {client.investorProfile}
@@ -265,7 +264,7 @@ export const Clients = () => {
                         <TableCell className="text-sm">
                           {client.broker}
                         </TableCell>
-                        
+
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
                             <Button
@@ -301,7 +300,7 @@ export const Clients = () => {
                                 <AlertDialogHeader>
                                   <AlertDialogTitle>¿Eliminar cliente?</AlertDialogTitle>
                                   <AlertDialogDescription>
-                                    Esta acción no se puede deshacer. Se eliminarán todos los datos 
+                                    Esta acción no se puede deshacer. Se eliminarán todos los datos
                                     del cliente incluyendo mensajes, documentos y actividades.
                                   </AlertDialogDescription>
                                 </AlertDialogHeader>

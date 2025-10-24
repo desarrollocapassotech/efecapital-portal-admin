@@ -79,7 +79,7 @@ export const Login = () => {
               </div>
             </CardTitle>
 
-            <p className="text-muted-foreground">Panel de Administrador</p>
+            <p className="text-muted-foreground">Panel de asesor</p>
           </div>
         </CardHeader>
 

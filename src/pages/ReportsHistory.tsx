@@ -147,7 +147,7 @@ export const ReportsHistory = () => {
   };
 
   return (
-    <div className="flex-1 space-y-6 p-6 pt-16 lg:pt-6">
+    <div className="flex-1 space-y-4 sm:space-y-6 p-3 sm:p-6 pt-16 lg:pt-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
@@ -157,8 +157,8 @@ export const ReportsHistory = () => {
             </Link>
           </Button>
           <div className="space-y-1">
-            <h1 className="text-3xl font-bold text-foreground">Historial de Informes</h1>
-            <p className="text-muted-foreground">
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Historial de Informes</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               Gestiona y filtra todos tus informes compartidos
             </p>
           </div>
@@ -172,6 +172,7 @@ export const ReportsHistory = () => {
               setTypeFilter('all');
               setVisibilityFilter('all');
             }}
+            className="w-full sm:w-auto"
           >
             <Filter className="mr-2 h-4 w-4" />
             Limpiar filtros
@@ -276,12 +277,12 @@ export const ReportsHistory = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Informe</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Publicado</TableHead>
-                    <TableHead>Destinatarios</TableHead>
-                    <TableHead>Tamaño</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
+                    <TableHead className="min-w-[200px]">Informe</TableHead>
+                    <TableHead className="min-w-[120px]">Tipo</TableHead>
+                    <TableHead className="min-w-[140px]">Publicado</TableHead>
+                    <TableHead className="min-w-[150px]">Destinatarios</TableHead>
+                    <TableHead className="min-w-[80px]">Tamaño</TableHead>
+                    <TableHead className="text-right min-w-[120px]">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

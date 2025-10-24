@@ -100,17 +100,17 @@ const ClientChat = () => {
 
   if (!client) {
     return (
-      <div className="flex-1 p-6 pt-16 lg:pt-6">
+      <div className="flex-1 p-3 sm:p-6 pt-16 lg:pt-6">
         <Card className="mx-auto max-w-2xl">
           <CardHeader>
-            <CardTitle>Chat no disponible</CardTitle>
+            <CardTitle className="text-lg sm:text-xl">Chat no disponible</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <p className="text-muted-foreground">
+            <p className="text-sm sm:text-base text-muted-foreground">
               No encontramos la información del cliente solicitada. Es posible que haya sido eliminado
               o que la dirección sea incorrecta.
             </p>
-            <Button onClick={handleGoBack}>Volver a mensajes</Button>
+            <Button onClick={handleGoBack} className="w-full sm:w-auto">Volver a mensajes</Button>
           </CardContent>
         </Card>
       </div>
@@ -118,36 +118,13 @@ const ClientChat = () => {
   }
 
   return (
-    <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-6">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-start gap-4">
-          <Button variant="ghost" size="icon" onClick={handleGoBack} className="hidden lg:inline-flex">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-              <span className="text-lg font-semibold text-primary-foreground">{initials}</span>
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-foreground">
-                Conversación con {client.firstName} {client.lastName}
-              </h1>
-              <p className="text-sm text-muted-foreground">Canal directo con el cliente</p>
-            </div>
-          </div>
-        </div>
-        <Button asChild variant="outline" className="lg:hidden">
-          <Link to="/messages">
-            <ArrowLeft className="mr-2 h-4 w-4" /> Volver a mensajes
-          </Link>
-        </Button>
-      </div>
+    <div className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 pt-16 lg:pt-6">
 
       <Card className="flex flex-1 flex-col">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div className="flex items-center gap-2">
             <MessageCircle className="h-5 w-5 text-primary" />
-            <CardTitle>Chat</CardTitle>
+            <CardTitle>Chat con {client.firstName}</CardTitle>
           </div>
           <span className="text-sm text-muted-foreground">
             {conversation.length} mensaje{conversation.length === 1 ? '' : 's'}
@@ -179,22 +156,21 @@ const ClientChat = () => {
                 return (
                   <div
                     key={message.id}
-                    className={`max-w-[80%] rounded-lg p-3 ${
-                      message.isFromAdvisor
+                    className={`max-w-[85%] sm:max-w-[80%] rounded-lg p-2 sm:p-3 ${message.isFromAdvisor
                         ? 'ml-auto bg-primary/10 border-l-4 border-primary'
                         : 'mr-auto bg-muted border-l-4 border-border'
-                    }`}
+                      }`}
                   >
-                    <div className="mb-2 flex items-center justify-between gap-4">
-                      <span className="text-sm font-medium">
+                    <div className="mb-2 flex items-center justify-between gap-2 sm:gap-4">
+                      <span className="text-xs sm:text-sm font-medium">
                         {message.isFromAdvisor ? 'Tú (Asesora)' : client.firstName}
                       </span>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
                         <span>{format(new Date(message.timestamp), 'dd/MM HH:mm', { locale: es })}</span>
                         {message.read ? (
-                          <CheckCheck className="h-4 w-4 text-emerald-500" aria-label="Mensaje visto" />
+                          <CheckCheck className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" aria-label="Mensaje visto" />
                         ) : (
-                          <Check className="h-4 w-4 text-muted-foreground" aria-label="Mensaje enviado" />
+                          <Check className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" aria-label="Mensaje enviado" />
                         )}
                       </div>
                     </div>
@@ -234,13 +210,13 @@ const ClientChat = () => {
           </div>
 
           <div className="space-y-3 border-t pt-4">
-            <div className="flex items-end gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
               <Textarea
                 value={reply}
                 onChange={(event) => setReply(event.target.value)}
                 placeholder="Escribe tu mensaje para el cliente..."
                 rows={3}
-                className="flex-1"
+                className="flex-1 text-sm sm:text-base"
                 onKeyDown={(event) => {
                   if (event.key === 'Enter' && !event.shiftKey) {
                     event.preventDefault();
@@ -252,10 +228,11 @@ const ClientChat = () => {
               <Button
                 onClick={handleSendMessage}
                 disabled={isSending || !reply.trim()}
-                size="icon"
+                className="h-12 w-full sm:w-16 sm:h-12 flex items-center justify-center gap-2 sm:gap-0"
                 aria-label="Enviar mensaje"
               >
                 <Send className="h-4 w-4" />
+                <span className="sm:hidden">Enviar</span>
               </Button>
             </div>
 
