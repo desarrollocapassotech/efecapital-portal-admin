@@ -9,6 +9,7 @@ import {
   FileDown,
   Check,
   CheckCheck,
+  Loader2,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -23,6 +24,7 @@ const ClientChat = () => {
   const { clients, messages, addMessage, markClientMessagesAsRead } = useDataStore();
   const [reply, setReply] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [tempMessage, setTempMessage] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const client = useMemo(() => clients.find((item) => item.id === id), [clients, id]);
@@ -69,28 +71,40 @@ const ClientChat = () => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [conversation.length]);
+  }, [conversation.length, tempMessage]);
 
   const handleSendMessage = async () => {
     if (!id || !reply.trim()) {
       return;
     }
 
+    const messageContent = reply.trim();
+    
+    // Limpiar el input inmediatamente
+    setReply('');
+    
+    // Crear mensaje temporal
+    setTempMessage(messageContent);
     setIsSending(true);
+
     try {
       await addMessage({
         clientId: id,
-        content: reply.trim(),
+        content: messageContent,
         timestamp: new Date(),
         isFromAdvisor: true,
         status: 'respondido',
       });
-
-      setReply('');
     } catch (error) {
       console.error('Error al enviar el mensaje', error);
+      // En caso de error, restaurar el mensaje
+      setReply(messageContent);
     } finally {
-      setIsSending(false);
+      // Limpiar el mensaje temporal después de un breve delay
+      setTimeout(() => {
+        setTempMessage(null);
+        setIsSending(false);
+      }, 1000);
     }
   };
 
@@ -206,6 +220,21 @@ const ClientChat = () => {
                 );
               })
             )}
+            
+            {/* Mensaje temporal con loader */}
+            {tempMessage && (
+              <div className="max-w-[85%] sm:max-w-[80%] ml-auto rounded-lg p-2 sm:p-3 bg-primary/10 border-l-4 border-primary">
+                <div className="mb-2 flex items-center justify-between gap-2 sm:gap-4">
+                  <span className="text-xs sm:text-sm font-medium">Tú (Asesora)</span>
+                  <div className="flex items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
+                    <span>Enviando...</span>
+                    <Loader2 className="h-3 w-3 sm:h-4 sm:w-4 animate-spin text-primary" />
+                  </div>
+                </div>
+                <p className="text-sm text-foreground">{tempMessage}</p>
+              </div>
+            )}
+            
             <div ref={messagesEndRef} />
           </div>
 

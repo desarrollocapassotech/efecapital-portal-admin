@@ -1,5 +1,5 @@
 import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Users, MessageCircle, FileText, LogOut, TrendingUp, Menu, X } from 'lucide-react';
+import { Users, MessageCircle, FileText, LogOut, TrendingUp, Menu, X, LayoutDashboard } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useState, useEffect } from 'react';
 
 const navigation = [
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Clientes', href: '/clients', icon: Users },
   { name: 'Mensajes', href: '/messages', icon: MessageCircle },
   { name: 'Informes', href: '/reports', icon: FileText },
