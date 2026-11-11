@@ -11,6 +11,8 @@ import {
   FileSpreadsheet,
   FileImage
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { PageHeader } from '@/components/PageHeader';
 import { useDataStore } from '@/stores/dataStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -223,23 +225,18 @@ export const Reports = () => {
   return (
     <div className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 pt-16 lg:pt-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Gestión de Informes</h1>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
+      <PageHeader
+        breadcrumbs={[{ label: 'Informes' }]}
+        title="Gestión de Informes"
+        actions={
           <Button variant="outline" asChild className="w-full sm:w-auto">
-            <a href="/reports/history">
+            <Link to="/reports/history">
               <BarChart3 className="mr-2 h-4 w-4" />
               Ver Historial
-            </a>
+            </Link>
           </Button>
-          <Button onClick={() => document.getElementById('upload-form')?.scrollIntoView({ behavior: 'smooth' })} className="w-full sm:w-auto">
-            <Plus className="mr-2 h-4 w-4" />
-            Nuevo Informe
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Formulario de subida mejorado */}
       <Card id="upload-form">
@@ -249,9 +246,6 @@ export const Reports = () => {
               <Upload className="h-5 w-5" />
               Nuevo informe
             </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Adjunta el archivo, define los destinatarios y comparte la actualización.
-            </p>
           </div>
           <div className="bg-primary/10 p-2 text-primary">
             <FileText className="h-5 w-5" />
@@ -332,9 +326,6 @@ export const Reports = () => {
             <div className="space-y-4">
               <div>
                 <Label>Destinatarios</Label>
-                <p className="text-sm text-muted-foreground">
-                  Decide si el informe es para toda la cartera o para clientes específicos.
-                </p>
               </div>
               <RadioGroup
                 value={visibility}

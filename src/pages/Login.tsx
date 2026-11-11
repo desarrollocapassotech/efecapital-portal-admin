@@ -74,7 +74,7 @@ export const Login = () => {
         <div className="brand-bar h-[3px]" />
         <CardHeader className="items-center space-y-3 pb-4 pt-8 text-center">
           <CardTitle className="flex justify-center">
-            <img src="logo11.png" alt="EFE Capital" className="w-24" />
+            <img src="/logo11.png" alt="EFE Capital" className="w-24" />
           </CardTitle>
           <p className="eyebrow">Panel de asesor</p>
         </CardHeader>

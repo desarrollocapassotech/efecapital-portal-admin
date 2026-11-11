@@ -1,6 +1,19 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Edit, MessageCircle, Mail, TrendingUp, Target, Building } from 'lucide-react';
+import { PageHeader } from '@/components/PageHeader';
+import {
+  Edit,
+  MessageCircle,
+  Mail,
+  TrendingUp,
+  Target,
+  Building,
+  Phone,
+  Clock,
+  CalendarDays,
+  type LucideIcon,
+} from 'lucide-react';
+import { CopyableText } from '@/components/CopyButton';
 import { useDataStore } from '@/stores/dataStore';
 import { useShowPreviewModules } from '@/stores/previewStore';
 import { Button } from '@/components/ui/button';
@@ -9,6 +22,17 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+/** Fila de la ficha del cliente: rótulo con ícono a la izquierda, valor a la derecha. */
+const InfoRow = ({ icon: Icon, label, children }: { icon: LucideIcon; label: string; children: React.ReactNode }) => (
+  <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] items-center gap-3 px-5 py-3.5">
+    <span className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+      <Icon className="h-3.5 w-3.5 shrink-0" />
+      {label}
+    </span>
+    <div className="min-w-0">{children}</div>
+  </div>
+);
 
 const ClientDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -26,13 +50,12 @@ const ClientDetail = () => {
 
   if (!client) {
     return (
-      <div className="flex-1 p-6">
-        <div className="text-center py-8">
-          <h2 className="text-2xl font-bold text-foreground">Cliente no encontrado</h2>
-          <Button asChild className="mt-4">
-            <Link to="/clients">Volver a Clientes</Link>
-          </Button>
-        </div>
+      <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-6">
+        <PageHeader
+          breadcrumbs={[{ label: 'Clientes', to: '/clients' }, { label: 'No encontrado' }]}
+          title="Cliente no encontrado"
+          description="Puede que haya sido eliminado o que el enlace no sea correcto."
+        />
       </div>
     );
   }
@@ -115,60 +138,43 @@ const ClientDetail = () => {
   return (
     <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <Button variant="outline" size="sm" className="p-2" asChild>
-          <Link to="/clients">
-            <ArrowLeft className="h-4 w-4" />
-            <span className="sr-only">Volver</span>
-          </Link>
-        </Button>
-
-        <div className="flex-1 flex flex-col items-center text-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
-            {client.firstName} {client.lastName}
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Vista completa del cliente</p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          {showPreviewModules && (
-            <Button variant="secondary" size="sm" asChild>
-              <Link to={`/messages/${id}`} className="flex items-center gap-2">
-                <MessageCircle className="h-4 w-4" />
-                Chat con cliente
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Clientes', to: '/clients' },
+          { label: `${client.firstName} ${client.lastName}` },
+        ]}
+        title={`${client.firstName} ${client.lastName}`}
+        description=""
+        actions={
+          <>
+            {showPreviewModules && (
+              <Button variant="secondary" size="sm" asChild>
+                <Link to={`/messages/${id}`} className="flex items-center gap-2">
+                  <MessageCircle className="h-4 w-4" />
+                  Chat con cliente
+                </Link>
+              </Button>
+            )}
+            <Button variant="default" size="sm" asChild>
+              <Link to={`/clients/${id}/edit`} className="flex items-center gap-2">
+                <Edit className="h-4 w-4" />
+                Editar
               </Link>
             </Button>
-          )}
-          <Button variant="default" size="sm" className="p-2" asChild>
-            <Link to={`/clients/${id}/edit`}>
-              <Edit className="h-4 w-4" />
-              <span className="sr-only">Editar</span>
-            </Link>
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      {/* Información del cliente */}
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Tipo de Inversor</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <Badge className={getTipoInversorColor(user.tipoInversor || '')}>
-                {user.tipoInversor}
-              </Badge>
-            </CardContent>
-          </Card>
+      {/* Dos columnas en desktop: ficha a la izquierda, objetivos + notas a la derecha */}
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        {/* Ficha del cliente */}
+        <Card className="lg:sticky lg:top-6">
+          <CardContent className="divide-y divide-border p-0">
+            <InfoRow icon={TrendingUp} label="Perfil">
+              <Badge className={getTipoInversorColor(user.tipoInversor || '')}>{user.tipoInversor}</Badge>
+            </InfoRow>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{user.brokers.length > 1 ? 'Brokers' : 'Broker'}</CardTitle>
-              <Building className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
+            <InfoRow icon={Building} label={user.brokers.length > 1 ? 'Brokers' : 'Broker'}>
               {user.brokers.length > 0 ? (
                 <div className="flex flex-wrap gap-1.5">
                   {user.brokers.map((broker) => (
@@ -178,12 +184,39 @@ const ClientDetail = () => {
                   ))}
                 </div>
               ) : (
-                <div className="text-sm text-muted-foreground">Sin asignar</div>
+                <span className="text-sm text-muted-foreground">Sin asignar</span>
               )}
-            </CardContent>
-          </Card>
-        </div>
+            </InfoRow>
 
+            <InfoRow icon={Clock} label="Horizonte">
+              <span className="text-sm">{client.investmentHorizon || '—'}</span>
+            </InfoRow>
+
+            <InfoRow icon={CalendarDays} label="Fecha de alta">
+              <span className="text-sm tabular-nums">
+                {client.createdAt ? format(new Date(client.createdAt), 'dd/MM/yyyy', { locale: es }) : '—'}
+              </span>
+            </InfoRow>
+
+            <InfoRow icon={Phone} label="Teléfono">
+              {user.telefono ? (
+                <CopyableText value={user.telefono} label="Teléfono" className="text-sm" />
+              ) : (
+                <span className="text-sm text-muted-foreground">—</span>
+              )}
+            </InfoRow>
+
+            <InfoRow icon={Mail} label="Email">
+              {user.email ? (
+                <CopyableText value={user.email} label="Email" className="max-w-full text-sm" />
+              ) : (
+                <span className="text-sm text-muted-foreground">—</span>
+              )}
+            </InfoRow>
+          </CardContent>
+        </Card>
+
+        <div className="space-y-6 lg:col-span-2">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -195,24 +228,9 @@ const ClientDetail = () => {
             <div
               className="text-muted-foreground leading-relaxed prose prose-sm max-w-none"
               dangerouslySetInnerHTML={{
-                __html:
-                  user?.objetivos ||
-                  'Comparte tus objetivos financieros con tu asesora para recibir recomendaciones personalizadas.',
+                __html: user?.objetivos || '<p>Sin objetivos registrados.</p>',
               }}
             />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Mail className="h-5 w-5" />
-              Contacto
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <p className="text-muted-foreground leading-relaxed">📞 {user.telefono}</p>
-            <p className="text-muted-foreground leading-relaxed">📧 {user.email}</p>
           </CardContent>
         </Card>
 
@@ -315,6 +333,7 @@ const ClientDetail = () => {
             </div>
           </CardContent>
         </Card>
+        </div>
       </div>
     </div>
   );

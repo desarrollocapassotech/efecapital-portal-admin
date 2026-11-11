@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useMemo } from 'react';
 import { BrokerPicker } from '@/components/BrokerPicker';
 import { buildBrokerOptions } from '@/lib/brokers';
 import { useNavigate, useParams, Link } from 'react-router-dom';
-import { ArrowLeft, Save, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { PageHeader } from '@/components/PageHeader';
+import { Save, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -247,7 +248,8 @@ export const ClientForm = () => {
     lastName: existingClient?.lastName ?? '',
     email: existingClient?.email ?? '',
     phone: existingClient?.phone ?? '',
-    investorProfile: existingClient?.investorProfile ?? 'Moderado',
+    // Las opciones del select están en minúsculas (así se guarda); normalizar para que no quede vacío
+    investorProfile: (existingClient?.investorProfile?.toLowerCase() ?? 'moderado') as FormState['investorProfile'],
     objectives: existingClient?.objectives ?? '',
     investmentHorizon: existingClient?.investmentHorizon ?? '',
     notes: '',
@@ -435,19 +437,18 @@ export const ClientForm = () => {
   return (
     <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-6">
       {/* Header */}
-      <div className="flex items-center space-x-4">
-        <Button variant="outline" asChild>
-          <Link to="/clients">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Volver
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">
-            {isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}
-          </h1>
-        </div>
-      </div>
+      <PageHeader
+        breadcrumbs={
+          isEditing && existingClient
+            ? [
+                { label: 'Clientes', to: '/clients' },
+                { label: `${existingClient.firstName} ${existingClient.lastName}`, to: `/clients/${id}` },
+                { label: 'Editar' },
+              ]
+            : [{ label: 'Clientes', to: '/clients' }, { label: isEditing ? 'Editar' : 'Nuevo cliente' }]
+        }
+        title={isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}
+      />
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -515,9 +516,6 @@ export const ClientForm = () => {
                   placeholder="+54 11 1234-5678"
                   className={errors.phone ? 'border-destructive' : ''}
                 />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Incluye código de país y de área para evitar confusiones.
-                </p>
                 {errors.phone && (
                   <p className="text-sm text-destructive mt-1">{errors.phone}</p>
                 )}
@@ -571,12 +569,9 @@ export const ClientForm = () => {
                   value={formData.investmentHorizon}
                   onChange={(e) => handleChange('investmentHorizon', e.target.value)}
                   onBlur={() => handleBlur('investmentHorizon')}
-                  placeholder="Ej: 5-7 años"
+                  placeholder="Ej: 5-7 años, largo plazo, corto plazo"
                   className={errors.investmentHorizon ? 'border-destructive' : ''}
                 />
-                <p className="text-sm text-muted-foreground mt-1">
-                  Puedes usar rangos de tiempo (ej: 3-5 años) o descripciones como "largo plazo".
-                </p>
                 {errors.investmentHorizon && (
                   <p className="text-sm text-destructive mt-1">{errors.investmentHorizon}</p>
                 )}
@@ -616,9 +611,6 @@ export const ClientForm = () => {
               placeholder="Notas adicionales sobre el cliente..."
               rows={4}
             />
-            <p className="text-sm text-muted-foreground mt-1">
-              Estas notas solo son visibles para ti como asesora.
-            </p>
           </CardContent>
         </Card>
 

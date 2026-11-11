@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { PageHeader } from '@/components/PageHeader';
 import {
   ArrowLeft,
   MessageCircle,
@@ -108,31 +109,27 @@ const ClientChat = () => {
     }
   };
 
-  const handleGoBack = () => {
-    navigate('/messages');
-  };
-
   if (!client) {
     return (
-      <div className="flex-1 p-3 sm:p-6 pt-16 lg:pt-6">
-        <Card className="mx-auto max-w-2xl">
-          <CardHeader>
-            <CardTitle className="text-lg sm:text-xl">Chat no disponible</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm sm:text-base text-muted-foreground">
-              No encontramos la información del cliente solicitada. Es posible que haya sido eliminado
-              o que la dirección sea incorrecta.
-            </p>
-            <Button onClick={handleGoBack} className="w-full sm:w-auto">Volver a mensajes</Button>
-          </CardContent>
-        </Card>
+      <div className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 pt-16 lg:pt-6">
+        <PageHeader
+          breadcrumbs={[{ label: 'Mensajes', to: '/messages' }, { label: 'No disponible' }]}
+          title="Chat no disponible"
+          description="No encontramos la información del cliente solicitada. Es posible que haya sido eliminado o que la dirección sea incorrecta."
+        />
       </div>
     );
   }
 
   return (
     <div className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 pt-16 lg:pt-6">
+      <PageHeader
+        breadcrumbs={[
+          { label: 'Mensajes', to: '/messages' },
+          { label: `${client.firstName} ${client.lastName}` },
+        ]}
+        title={`Chat con ${client.firstName} ${client.lastName}`}
+      />
 
       <Card className="flex flex-1 flex-col">
         <CardHeader className="flex flex-row items-center justify-between space-y-0">

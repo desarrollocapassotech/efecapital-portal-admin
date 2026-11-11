@@ -29,6 +29,7 @@ import {
 import { useShowPreviewModules } from '@/stores/previewStore';
 import { CopyableText } from '@/components/CopyButton';
 import { ClientCombobox } from '@/components/ClientCombobox';
+import { PageHeader } from '@/components/PageHeader';
 import { buildBrokerOptions, formatBrokers, sameBroker } from '@/lib/brokers';
 import {
   Select,
@@ -274,17 +275,18 @@ export const Clients = () => {
   return (
     <div className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 pt-16 lg:pt-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Gestión de Clientes</h1>
-        </div>
-        <Button asChild className="w-full sm:w-auto">
-          <Link to="/clients/new">
-            <Plus className="h-4 w-4 mr-2" />
-            Nuevo Cliente
-          </Link>
-        </Button>
-      </div>
+      <PageHeader
+        breadcrumbs={[{ label: 'Clientes' }]}
+        title="Gestión de Clientes"
+        actions={
+          <Button asChild className="w-full sm:w-auto">
+            <Link to="/clients/new">
+              <Plus className="h-4 w-4 mr-2" />
+              Nuevo Cliente
+            </Link>
+          </Button>
+        }
+      />
 
       {/* Filtros */}
       <Card>

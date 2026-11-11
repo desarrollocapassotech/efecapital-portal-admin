@@ -35,7 +35,7 @@ const readCollapsed = () => {
 
 const BrandLockup = ({ compact = false, iconOnly = false }: { compact?: boolean; iconOnly?: boolean }) => (
   <div className={`flex items-center gap-3 ${iconOnly ? 'justify-center' : ''}`}>
-    <img src="logo-white.png" alt="EFE Capital" className={`shrink-0 ${compact ? 'h-8 w-8' : 'h-10 w-10'}`} />
+    <img src="/logo-white.png" alt="EFE Capital" className={`shrink-0 ${compact ? 'h-8 w-8' : 'h-10 w-10'}`} />
     {!iconOnly && (
       <span className="whitespace-nowrap font-display text-sm font-semibold tracking-[0.18em] text-white">
         EFE CAPITAL

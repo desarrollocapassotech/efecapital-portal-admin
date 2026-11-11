@@ -10,11 +10,11 @@ import {
   Trash2,
   FileText,
   Users,
-  ArrowLeft,
   FileSpreadsheet,
   FileImage
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { PageHeader } from '@/components/PageHeader';
 import { useDataStore } from '@/stores/dataStore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -149,21 +149,11 @@ export const ReportsHistory = () => {
   return (
     <div className="flex-1 space-y-4 sm:space-y-6 p-3 sm:p-6 pt-16 lg:pt-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/reports">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Historial de Informes</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              Gestiona y filtra todos tus informes compartidos
-            </p>
-          </div>
-        </div>
-        <div className="flex gap-2">
+      <PageHeader
+        breadcrumbs={[{ label: 'Informes', to: '/reports' }, { label: 'Historial' }]}
+        title="Historial de Informes"
+        description=""
+        actions={
           <Button
             variant="outline"
             size="sm"
@@ -177,8 +167,8 @@ export const ReportsHistory = () => {
             <Filter className="mr-2 h-4 w-4" />
             Limpiar filtros
           </Button>
-        </div>
-      </div>
+        }
+      />
 
       {/* Filtros */}
       <Card>
@@ -242,8 +232,8 @@ export const ReportsHistory = () => {
             {filteredDocuments.length > 0 
               ? `Mostrando ${filteredDocuments.length} de ${documents.length} informes`
               : documents.length === 0 
-                ? 'No hay informes compartidos'
-                : 'No se encontraron informes con los filtros aplicados'
+                ? ''
+                : ''
             }
           </p>
         </CardHeader>

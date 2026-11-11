@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Users, MessageCircle, FileText, ArrowRight, type LucideIcon } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
+import { PageHeader } from '@/components/PageHeader';
 import { useShowPreviewModules } from '@/stores/previewStore';
 
 type Tile = {
@@ -41,7 +42,8 @@ const Index = () => {
 
   return (
     <div className="flex-1 p-4 sm:p-8 pt-20 lg:pt-8">
-      <div className="mx-auto max-w-5xl">
+      <div className="mx-auto max-w-5xl space-y-6">
+        <PageHeader breadcrumbs={[{ label: 'Dashboard' }]} title="Dashboard" />
         <div
           className={`grid grid-cols-1 gap-px border border-border bg-border ${
             tiles.length > 1 ? 'md:grid-cols-3' : 'max-w-sm'

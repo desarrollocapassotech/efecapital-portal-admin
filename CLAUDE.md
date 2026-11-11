@@ -55,6 +55,7 @@ Todos están definidos como tokens HSL en `src/index.css` y expuestos en `tailwi
 ### Layout
 - **Menú lateral** (`src/components/Sidebar.tsx`): fondo `bg-sidebar`, logo blanco (`public/logo-white.png`) + "EFE CAPITAL" en Montserrat espaciada, `.brand-bar` debajo. Ítem activo: `bg-sidebar-accent`, texto blanco, barra dorada de 3px a la izquierda e ícono `text-gold-light`. Contraíble en desktop (`w-64` ↔ `lg:w-16`, se guarda en `localStorage`); en móvil es un panel deslizable.
 - **Barra superior** (`src/components/Layout.tsx` + `UserMenu.tsx`): en desktop, barra blanca `h-14` con el usuario (iniciales cuadradas + nombre/email) y un botón **"Cerrar sesión" separado, visible, no dentro de un desplegable**. En móvil, la barra azul incluye mensajes, iniciales y botón de salir.
+- **Encabezado de página**: siempre `PageHeader` (`src/components/PageHeader.tsx`) con breadcrumb + título + acciones. **No usar botones "Volver"**; la navegación hacia atrás es el breadcrumb (ej. `Clientes › Juan Pérez › Editar`).
 - Las páginas dejan espacio para la barra móvil (`pt-16`/`pt-20` en móvil, `lg:pt-*` en desktop).
 - Iconos: `lucide-react`, tamaño `h-4 w-4` en navegación y tarjetas.
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { PageHeader } from '@/components/PageHeader';
 import { Edit, MessageCircle, Search } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { Input } from '@/components/ui/input';
@@ -151,29 +152,17 @@ export const Messages = () => {
   return (
     <div className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 pt-16 lg:pt-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <div className="relative lg:hidden">
-            <MessageCircle className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
-            {hasNewMessages && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 w-5 sm:h-6 sm:min-w-[1.5rem] px-1 text-xs leading-none flex items-center justify-center"
-              >
-                {displayNewMessagesCount}
-              </Badge>
-            )}
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Mensajes</h1>
-          </div>
-        </div>
-        {hasNewMessages && (
-          <Badge className="hidden lg:inline-flex h-6 min-w-[1.5rem] px-2 text-xs items-center justify-center">
-            {displayNewMessagesCount}
-          </Badge>
-        )}
-      </div>
+      <PageHeader
+        breadcrumbs={[{ label: 'Mensajes' }]}
+        title="Mensajes"
+        actions={
+          hasNewMessages ? (
+            <Badge className="inline-flex h-6 min-w-[1.5rem] items-center justify-center self-start bg-gold-light px-2 text-xs text-gold-foreground hover:bg-gold-light sm:self-auto">
+              {displayNewMessagesCount} sin leer
+            </Badge>
+          ) : undefined
+        }
+      />
 
       <Tabs defaultValue="messages" className="space-y-6">
         <TabsList>
