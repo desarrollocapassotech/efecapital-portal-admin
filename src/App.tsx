@@ -14,10 +14,14 @@ import ClientChat from "./pages/ClientChat";
 import { Reports } from "./pages/Reports";
 import ReportsHistory from "./pages/ReportsHistory";
 import NotFound from "./pages/NotFound";
-import Index from "./pages/Index";
 import { useAuthStore } from "@/stores/authStore";
 import { useDataStore } from "@/stores/dataStore";
 import { useNotificationSetup } from "@/hooks/useNotificationSetup";
+import { useShowPreviewModules } from "@/stores/previewStore";
+
+/** Mensajes e Informes: si los módulos en desarrollo están ocultos, redirige a Clientes. */
+const PreviewRoute = ({ children }: { children: JSX.Element }) =>
+  useShowPreviewModules() ? children : <Navigate to="/clients" replace />;
 
 const queryClient = new QueryClient();
 
@@ -58,15 +62,16 @@ const App = () => {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Layout />}>
-              <Route index element={<Index />} />
+              {/* El Dashboard está oculto (redundante): la pantalla de inicio es Clientes */}
+              <Route index element={<Navigate to="/clients" replace />} />
               <Route path="clients" element={<Clients />} />
               <Route path="clients/:id" element={<ClientDetail />} />
               <Route path="clients/:id/edit" element={<ClientForm />} />
               <Route path="clients/new" element={<ClientForm />} />
-              <Route path="messages" element={<Messages />} />
-              <Route path="messages/:id" element={<ClientChat />} />
-              <Route path="reports" element={<Reports />} />
-              <Route path="reports/history" element={<ReportsHistory />} />
+              <Route path="messages" element={<PreviewRoute><Messages /></PreviewRoute>} />
+              <Route path="messages/:id" element={<PreviewRoute><ClientChat /></PreviewRoute>} />
+              <Route path="reports" element={<PreviewRoute><Reports /></PreviewRoute>} />
+              <Route path="reports/history" element={<PreviewRoute><ReportsHistory /></PreviewRoute>} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

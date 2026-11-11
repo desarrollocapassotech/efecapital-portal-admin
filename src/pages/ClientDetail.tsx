@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Edit, MessageCircle, Mail, TrendingUp, Target, Building } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
+import { useShowPreviewModules } from '@/stores/previewStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,7 @@ const ClientDetail = () => {
     updateClient,
   } = useDataStore();
 
+  const showPreviewModules = useShowPreviewModules();
   const [newNote, setNewNote] = useState('');
   const [editingNoteIndex, setEditingNoteIndex] = useState<number | null>(null);
   const [editingNoteText, setEditingNoteText] = useState('');
@@ -128,12 +130,14 @@ const ClientDetail = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" asChild>
-            <Link to={`/messages/${id}`} className="flex items-center gap-2">
-              <MessageCircle className="h-4 w-4" />
-              Chat con cliente
-            </Link>
-          </Button>
+          {showPreviewModules && (
+            <Button variant="secondary" size="sm" asChild>
+              <Link to={`/messages/${id}`} className="flex items-center gap-2">
+                <MessageCircle className="h-4 w-4" />
+                Chat con cliente
+              </Link>
+            </Button>
+          )}
           <Button variant="default" size="sm" className="p-2" asChild>
             <Link to={`/clients/${id}/edit`}>
               <Edit className="h-4 w-4" />

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useDataStore } from '@/stores/dataStore';
 import { notificationService } from '@/lib/notifications';
+import { useShowPreviewModules } from '@/stores/previewStore';
 
 /**
  * Hook para manejar notificaciones automáticas
@@ -8,6 +9,7 @@ import { notificationService } from '@/lib/notifications';
  */
 export const useNotificationSetup = () => {
   const { messages, clients } = useDataStore();
+  const showPreviewModules = useShowPreviewModules();
 
   useEffect(() => {
     // Verificar si las notificaciones están soportadas y configuradas
@@ -29,7 +31,8 @@ export const useNotificationSetup = () => {
 
   // Efecto para detectar mensajes nuevos y mostrar notificaciones
   useEffect(() => {
-    if (!notificationService.isPermissionGranted()) {
+    // Mensajes todavía no está en uso: sin notificaciones mientras el módulo esté oculto
+    if (!showPreviewModules || !notificationService.isPermissionGranted()) {
       return;
     }
 
@@ -53,7 +56,7 @@ export const useNotificationSetup = () => {
         });
       }
     }
-  }, [messages, clients]);
+  }, [messages, clients, showPreviewModules]);
 
   return {
     requestPermission: () => notificationService.requestPermission(),

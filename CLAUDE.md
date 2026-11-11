@@ -2,6 +2,16 @@
 
 React + Vite + TypeScript + Tailwind + shadcn/ui. Firebase para auth y datos (`src/lib/firebase.ts`, `src/stores/`).
 
+## Navegación
+
+La pantalla de inicio es **Clientes**: `/` redirige a `/clients`. El Dashboard (`src/pages/Index.tsx`) está oculto por redundante: no tiene ruta ni ítem en el menú.
+
+## Módulos en desarrollo
+
+El foco actual es el **facturador**. **Mensajes** e **Informes** todavía no se usan: están ocultos por defecto detrás de `usePreviewStore` / `useShowPreviewModules` (`src/stores/previewStore.ts`, guardado en localStorage). El usuario los puede mostrar con el switch "En desarrollo" del menú lateral, y ahí aparecen con la etiqueta "Beta".
+
+Lo que respeta ese flag: ítems del menú (`preview: true` en `Sidebar.tsx`), ícono de mensajes de la barra móvil, tarjetas del Dashboard (oculto), botones "Chat" en Clientes y Detalle de cliente, rutas `/messages*` y `/reports*` (`PreviewRoute` en `App.tsx`, redirige a `/clients`) y notificaciones push de mensajes. Cualquier entrada nueva a estos módulos tiene que pasar por el mismo flag.
+
 ## Estilo visual
 
 Corporativo, cuadrado y minimalista, basado en el logo de EFE Capital (`../Logo1.png`, `../Logo2.png`): negro/blanco, una barra dorada con degradé y azul marino institucional.

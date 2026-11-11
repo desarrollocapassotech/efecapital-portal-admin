@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { useShowPreviewModules } from '@/stores/previewStore';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -32,6 +33,7 @@ export const Clients = () => {
   const navigate = useNavigate();
   const { clients, deleteClient, messages, documents } = useDataStore();
   const [searchTerm, setSearchTerm] = useState('');
+  const showPreviewModules = useShowPreviewModules();
 
   // Hook para detectar si es móvil
   const [isMobile, setIsMobile] = useState(false);
@@ -158,15 +160,17 @@ export const Clients = () => {
 
                       {/* Acciones */}
                       <div className="flex flex-wrap justify-end gap-2 pt-3">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/messages/${client.id}`)}
-                          className="gap-1 text-xs sm:text-sm"
-                        >
-                          <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden xs:inline">Chat</span>
-                        </Button>
+                        {showPreviewModules && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/messages/${client.id}`)}
+                            className="gap-1 text-xs sm:text-sm"
+                          >
+                            <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4" />
+                            <span className="hidden xs:inline">Chat</span>
+                          </Button>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -267,15 +271,17 @@ export const Clients = () => {
 
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => navigate(`/messages/${client.id}`)}
-                              className="gap-1"
-                            >
-                              <MessageCircle className="h-4 w-4" />
-                              Chat
-                            </Button>
+                            {showPreviewModules && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate(`/messages/${client.id}`)}
+                                className="gap-1"
+                              >
+                                <MessageCircle className="h-4 w-4" />
+                                Chat
+                              </Button>
+                            )}
                             <Button
                               variant="outline"
                               size="sm"

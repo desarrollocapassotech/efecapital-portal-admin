@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Users, MessageCircle, FileText, ArrowRight, type LucideIcon } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
+import { useShowPreviewModules } from '@/stores/previewStore';
 
 type Tile = {
   to: string;
@@ -18,23 +19,34 @@ const Index = () => {
   const unreadMessages = messages.filter((m) => !m.isFromAdvisor && !m.read).length;
   const displayUnreadCount = unreadMessages > 99 ? '99+' : unreadMessages;
 
+  const showPreviewModules = useShowPreviewModules();
+
   const tiles: Tile[] = [
     { to: '/clients', label: 'Clientes', icon: Users, value: clients.length, caption: 'Clientes registrados' },
-    {
-      to: '/messages',
-      label: 'Mensajes',
-      icon: MessageCircle,
-      value: displayUnreadCount,
-      caption: unreadMessages === 1 ? 'Mensaje sin leer' : 'Mensajes sin leer',
-      highlight: unreadMessages > 0,
-    },
-    { to: '/reports', label: 'Informes', icon: FileText, value: documents.length, caption: 'Informes publicados' },
+    // Módulos en desarrollo: solo visibles si el usuario los activa
+    ...(showPreviewModules
+      ? [
+          {
+            to: '/messages',
+            label: 'Mensajes',
+            icon: MessageCircle,
+            value: displayUnreadCount,
+            caption: unreadMessages === 1 ? 'Mensaje sin leer' : 'Mensajes sin leer',
+            highlight: unreadMessages > 0,
+          },
+          { to: '/reports', label: 'Informes', icon: FileText, value: documents.length, caption: 'Informes publicados' },
+        ]
+      : []),
   ];
 
   return (
     <div className="flex-1 p-4 sm:p-8 pt-20 lg:pt-8">
       <div className="mx-auto max-w-5xl">
-        <div className="grid grid-cols-1 gap-px border border-border bg-border md:grid-cols-3">
+        <div
+          className={`grid grid-cols-1 gap-px border border-border bg-border ${
+            tiles.length > 1 ? 'md:grid-cols-3' : 'max-w-sm'
+          }`}
+        >
           {tiles.map(({ to, label, icon: Icon, value, caption, highlight }) => (
             <Link
               key={to}
