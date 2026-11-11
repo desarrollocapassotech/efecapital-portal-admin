@@ -64,29 +64,29 @@ const getFileIcon = (fileName: string) => {
   const extension = fileName.split('.').pop()?.toLowerCase();
   switch (extension) {
     case 'pdf':
-      return <FileText className="h-4 w-4 text-red-500" />;
+      return <FileText className="h-4 w-4 text-primary" />;
     case 'xlsx':
     case 'xls':
-      return <FileSpreadsheet className="h-4 w-4 text-green-500" />;
+      return <FileSpreadsheet className="h-4 w-4 text-primary" />;
     case 'png':
     case 'jpg':
     case 'jpeg':
-      return <FileImage className="h-4 w-4 text-blue-500" />;
+      return <FileImage className="h-4 w-4 text-primary" />;
     default:
-      return <FileText className="h-4 w-4 text-gray-500" />;
+      return <FileText className="h-4 w-4 text-primary" />;
   }
 };
 
 const getDocumentTypeIcon = (type: Document['type']) => {
   switch (type) {
     case 'rendimiento':
-      return <TrendingUp className="h-4 w-4 text-green-500" />;
+      return <TrendingUp className="h-4 w-4 text-gold" />;
     case 'recomendaciones':
-      return <Users className="h-4 w-4 text-blue-500" />;
+      return <Users className="h-4 w-4 text-gold" />;
     case 'informe_mercado':
-      return <BarChart3 className="h-4 w-4 text-purple-500" />;
+      return <BarChart3 className="h-4 w-4 text-gold" />;
     default:
-      return <FileText className="h-4 w-4 text-gray-500" />;
+      return <FileText className="h-4 w-4 text-primary" />;
   }
 };
 

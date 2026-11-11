@@ -182,7 +182,7 @@ const ClientChat = () => {
                       <div className="flex items-center gap-1 sm:gap-2 text-xs text-muted-foreground">
                         <span>{format(new Date(message.timestamp), 'dd/MM HH:mm', { locale: es })}</span>
                         {message.read ? (
-                          <CheckCheck className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-500" aria-label="Mensaje visto" />
+                          <CheckCheck className="h-3 w-3 sm:h-4 sm:w-4 text-gold" aria-label="Mensaje visto" />
                         ) : (
                           <Check className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" aria-label="Mensaje enviado" />
                         )}

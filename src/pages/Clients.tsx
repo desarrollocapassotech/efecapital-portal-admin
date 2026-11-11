@@ -62,10 +62,10 @@ export const Clients = () => {
 
   const getProfileColor = (profile: string) => {
     switch (profile) {
-      case 'Conservador': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Moderado': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'Agresivo': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
+      case 'Conservador': return 'bg-primary/10 text-primary border-primary/20';
+      case 'Moderado': return 'bg-gold/10 text-gold border-gold/30';
+      case 'Agresivo': return 'bg-destructive/10 text-destructive border-destructive/20';
+      default: return 'bg-muted text-muted-foreground border-border';
     }
   };
 
@@ -135,7 +135,7 @@ export const Clients = () => {
                     <CardHeader className="pb-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                          <div className="w-10 h-10 bg-primary flex items-center justify-center">
                             <span className="text-sm font-medium text-primary-foreground">
                               {client.firstName[0]}{client.lastName[0]}
                             </span>
@@ -235,7 +235,7 @@ export const Clients = () => {
                       <TableRow key={client.id}>
                         <TableCell>
                           <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                            <div className="w-10 h-10 bg-primary flex items-center justify-center">
                               <span className="text-sm font-medium text-primary-foreground">
                                 {client.firstName[0]}{client.lastName[0]}
                               </span>

@@ -1,9 +1,15 @@
-import { NavLink, Link, useLocation, useNavigate } from 'react-router-dom';
-import { Users, MessageCircle, FileText, LogOut, TrendingUp, Menu, X, LayoutDashboard } from 'lucide-react';
-import { useAuthStore } from '@/stores/authStore';
+import { NavLink, Link, useLocation } from 'react-router-dom';
+import {
+  Users,
+  MessageCircle,
+  FileText,
+  Menu,
+  LayoutDashboard,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { UserMenu } from '@/components/UserMenu';
 import { useState, useEffect } from 'react';
 
 const navigation = [
@@ -13,39 +19,59 @@ const navigation = [
   { name: 'Informes', href: '/reports', icon: FileText },
 ];
 
+const COLLAPSE_KEY = 'efe-admin-sidebar-collapsed';
+
+const readCollapsed = () => {
+  try {
+    return localStorage.getItem(COLLAPSE_KEY) === '1';
+  } catch {
+    return false;
+  }
+};
+
+const BrandLockup = ({ compact = false, iconOnly = false }: { compact?: boolean; iconOnly?: boolean }) => (
+  <div className={`flex items-center gap-3 ${iconOnly ? 'justify-center' : ''}`}>
+    <img src="logo-white.png" alt="EFE Capital" className={`shrink-0 ${compact ? 'h-8 w-8' : 'h-10 w-10'}`} />
+    {!iconOnly && (
+      <span className="whitespace-nowrap font-display text-sm font-semibold tracking-[0.18em] text-white">
+        EFE CAPITAL
+      </span>
+    )}
+  </div>
+);
+
+const CountBadge = ({ value }: { value: number | string }) => (
+  <span className="inline-flex h-5 min-w-[1.25rem] items-center justify-center bg-gold-light px-1.5 text-[11px] font-semibold text-gold-foreground">
+    {value}
+  </span>
+);
+
 export const Sidebar = () => {
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
-  const { notifications, messages } = useDataStore();
+  const { messages } = useDataStore();
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  // "Contraído" solo aplica en desktop (lg+); en móvil el menú es un panel deslizable
+  const [collapsed, setCollapsed] = useState(readCollapsed);
 
-  const unreadNotifications = notifications.filter((n) => !n.read).length;
-  const newMessagesCount = messages.filter(
-    (m) => !m.isFromAdvisor && (!m.read)
-  ).length;
+  const toggleCollapsed = () => {
+    setCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem(COLLAPSE_KEY, next ? '1' : '0');
+      } catch {
+        /* sin almacenamiento disponible */
+      }
+      return next;
+    });
+  };
+
+  // Oculta un elemento solo en desktop cuando el menú está contraído
+  const hideWhenCollapsed = collapsed ? 'lg:hidden' : '';
+
+  const newMessagesCount = messages.filter((m) => !m.isFromAdvisor && !m.read).length;
   const displayNewMessagesCount = newMessagesCount > 99 ? '99+' : newMessagesCount;
   const hasNewMessages = newMessagesCount > 0;
-
-  const displayName = user?.name || user?.email || 'Usuario';
-  const initials = displayName
-    .split(' ')
-    .filter(Boolean)
-    .map((part) => part[0]?.toUpperCase())
-    .join('')
-    .slice(0, 2) || 'FA';
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      navigate('/login');
-    } catch (error) {
-      console.error('Error al cerrar sesión', error);
-    } finally {
-      setIsSidebarOpen(false);
-    }
-  };
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -58,154 +84,127 @@ export const Sidebar = () => {
 
   return (
     <>
-      {/* === NAVBAR MÓVIL: botón ☰ a la izquierda, título centrado y clickeable === */}
-      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
-        <div className="flex items-center justify-between px-4 py-3 relative">
-          {/* Botón ☰ a la izquierda */}
+      {/* === NAVBAR MÓVIL === */}
+      <header className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-sidebar">
+        <div className="flex h-14 items-center justify-between px-3">
           <button
-            onClick={() => setIsSidebarOpen(true)}
-            className="p-2 rounded-md text-foreground hover:bg-muted z-10"
+            onClick={() => setIsSidebarOpen((open) => !open)}
+            className="p-2 text-white hover:bg-sidebar-accent"
+            aria-label="Abrir menú"
           >
-            <Menu className="h-6 w-6" />
+            <Menu className="h-5 w-5" />
           </button>
 
-          <Link
-            to="/clients"
-            className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 flex items-center space-x-2"
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <div className="p-1.5 rounded-lg">
-              <img src="logo11.png" alt="Logo" className='w-12' />
-            </div>
-            <div className="text-center">
-              <p className="text-xs text-muted-foreground">Panel de Administrador</p>
-            </div>
+          <Link to="/clients" onClick={() => setIsSidebarOpen(false)}>
+            <BrandLockup compact />
           </Link>
 
-          <Link
-            to="/messages"
-            className="p-2 rounded-md text-foreground hover:bg-muted relative"
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <MessageCircle className="h-6 w-6" />
-            {hasNewMessages && (
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1 text-xs leading-none flex items-center justify-center"
-              >
-                {displayNewMessagesCount}
-              </Badge>
-            )}
-          </Link>
+          <div className="flex items-center gap-1">
+            <Link
+              to="/messages"
+              className="relative p-2 text-white hover:bg-sidebar-accent"
+              onClick={() => setIsSidebarOpen(false)}
+              aria-label="Mensajes"
+            >
+              <MessageCircle className="h-5 w-5" />
+              {hasNewMessages && (
+                <span className="absolute -top-0.5 -right-0.5 inline-flex h-4 min-w-[1rem] items-center justify-center bg-gold-light px-1 text-[10px] font-semibold text-gold-foreground">
+                  {displayNewMessagesCount}
+                </span>
+              )}
+            </Link>
+            <UserMenu variant="dark" />
+          </div>
         </div>
+        <div className="brand-bar h-[2px]" />
       </header>
 
-      {/* === SIDEBAR (deslizable en móvil, fijo en desktop) === */}
-      <div
+      {/* === SIDEBAR (deslizable en móvil, fijo y contraíble en desktop) === */}
+      <aside
         className={`
-          fixed lg:static inset-y-0 left-0 z-40
-          w-64 bg-card border-r border-border
-          transform transition-transform duration-300 ease-in-out
-          ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-          lg:translate-x-0
-          ${isSidebarOpen ? 'top-16' : 'top-0'}
+          fixed lg:static left-0 bottom-0 z-40 shrink-0 overflow-hidden
+          w-64 ${collapsed ? 'lg:w-16' : ''} bg-sidebar text-sidebar-foreground
+          transform transition-[transform,width] duration-200 ease-out
+          ${isSidebarOpen ? 'translate-x-0 top-[58px]' : '-translate-x-full top-0'}
+          lg:translate-x-0 lg:top-0
         `}
       >
-        <div className="flex flex-col h-full">
-          {/* Header del sidebar (solo desktop) */}
-          <div className="hidden lg:block p-6 border-b border-border">
-            <Link
-              to="/clients"
-              className="flex items-center space-x-3"
-            >
-              <div className="p-2 rounded-lg">
-                <img src="logo11.png" alt="Logo" />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Panel de Administrador</p>
-              </div>
+        <div className="flex h-full flex-col">
+          {/* Marca (solo desktop) */}
+          <div className="hidden lg:block">
+            <Link to="/clients" className={`block py-6 ${collapsed ? 'px-3' : 'px-6'}`} title="EFE Capital">
+              <BrandLockup iconOnly={collapsed} />
             </Link>
-          </div>
-
-          {/* Información del usuario */}
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                <span className="text-sm font-medium text-primary-foreground">
-                  {initials}
-                </span>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{displayName}</p>
-                <p className="text-xs text-muted-foreground">{user?.email}</p>
-              </div>
-            </div>
+            <div className="brand-bar h-[2px]" />
           </div>
 
           {/* Navegación */}
-          <nav className="flex-1 p-4 space-y-2">
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden py-6">
+            <p
+              className={`${collapsed ? 'lg:invisible' : ''} px-6 pb-3 font-display text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/50`}
+            >
+              Menú
+            </p>
             {navigation.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.href);
+              const showBadge = item.name === 'Mensajes' && hasNewMessages;
 
               return (
                 <NavLink
                   key={item.name}
                   to={item.href}
+                  title={collapsed ? item.name : undefined}
                   className={`
-                    relative flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors
+                    relative flex items-center gap-3 px-6 py-2.5 text-sm font-medium transition-colors
+                    ${collapsed ? 'lg:justify-center lg:px-0' : ''}
                     ${active
-                      ? 'bg-primary text-primary-foreground shadow-sm'
-                      : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                    }
+                      ? 'bg-sidebar-accent text-white'
+                      : 'text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-white'}
                   `}
                   onClick={() => setIsSidebarOpen(false)}
                 >
-                  <Icon className="h-5 w-5 mr-3" />
-                  <span className="flex-1">{item.name}</span>
-                  {item.name === 'Notificaciones' && unreadNotifications > 0 && (
-                    <Badge variant="destructive" className="ml-2 h-5 px-2 text-xs">
-                      {unreadNotifications}
-                    </Badge>
-                  )}
-                  {item.name === 'Mensajes' && hasNewMessages && (
-                    <>
-                      <Badge
-                        variant="destructive"
-                        className="hidden lg:flex absolute -top-1 -right-1 h-5 min-w-[1.25rem] px-1 text-xs leading-none items-center justify-center"
-                      >
-                        {displayNewMessagesCount}
-                      </Badge>
-                      <Badge variant="secondary" className="lg:hidden ml-2 h-5 px-2 text-xs">
-                        {displayNewMessagesCount}
-                      </Badge>
-                    </>
+                  {active && <span className="absolute inset-y-0 left-0 w-[3px] bg-gold-light" />}
+                  <span className="relative shrink-0">
+                    <Icon className={`h-4 w-4 ${active ? 'text-gold-light' : ''}`} />
+                    {collapsed && showBadge && (
+                      <span className="absolute -right-1.5 -top-1.5 hidden h-2 w-2 bg-gold-light lg:block" />
+                    )}
+                  </span>
+                  <span className={`whitespace-nowrap ${hideWhenCollapsed}`}>{item.name}</span>
+                  {showBadge && (
+                    <span className={`ml-auto ${hideWhenCollapsed}`}>
+                      <CountBadge value={displayNewMessagesCount} />
+                    </span>
                   )}
                 </NavLink>
               );
             })}
           </nav>
 
-          {/* Cerrar sesión */}
-          <div className="p-4 border-t border-border">
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-muted-foreground hover:text-foreground"
-              onClick={handleLogout}
-            >
-              <LogOut className="h-5 w-5 mr-3" />
-              Cerrar Sesión
-            </Button>
-          </div>
-        </div>
-      </div>
+          {/* Contraer / expandir (solo desktop) */}
+          <button
+            onClick={toggleCollapsed}
+            title={collapsed ? 'Expandir menú' : 'Contraer menú'}
+            aria-label={collapsed ? 'Expandir menú' : 'Contraer menú'}
+            aria-expanded={!collapsed}
+            className={`hidden lg:flex items-center gap-3 border-t border-sidebar-border py-3 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent/60 hover:text-white ${
+              collapsed ? 'justify-center px-0' : 'px-6'
+            }`}
+          >
+            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            {!collapsed && <span className="whitespace-nowrap">Contraer</span>}
+          </button>
 
-      {/* Overlay oscuro (solo en móvil cuando el sidebar está abierto) */}
+        </div>
+      </aside>
+
+      {/* Overlay oscuro (solo móvil) */}
       {isSidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-30 bg-black/50"
+          className="lg:hidden fixed inset-0 top-[58px] z-30 bg-black/50"
           onClick={() => setIsSidebarOpen(false)}
-        ></div>
+        />
       )}
     </>
   );

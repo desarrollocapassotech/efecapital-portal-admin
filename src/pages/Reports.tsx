@@ -65,16 +65,16 @@ const getFileIcon = (fileName: string) => {
   const extension = fileName.split('.').pop()?.toLowerCase();
   switch (extension) {
     case 'pdf':
-      return <FileText className="h-4 w-4 text-red-500" />;
+      return <FileText className="h-4 w-4 text-primary" />;
     case 'xlsx':
     case 'xls':
-      return <FileSpreadsheet className="h-4 w-4 text-green-500" />;
+      return <FileSpreadsheet className="h-4 w-4 text-primary" />;
     case 'png':
     case 'jpg':
     case 'jpeg':
-      return <FileImage className="h-4 w-4 text-blue-500" />;
+      return <FileImage className="h-4 w-4 text-primary" />;
     default:
-      return <FileText className="h-4 w-4 text-gray-500" />;
+      return <FileText className="h-4 w-4 text-primary" />;
   }
 };
 
@@ -253,7 +253,7 @@ export const Reports = () => {
               Adjunta el archivo, define los destinatarios y comparte la actualización.
             </p>
           </div>
-          <div className="rounded-full bg-primary/10 p-2 text-primary">
+          <div className="bg-primary/10 p-2 text-primary">
             <FileText className="h-5 w-5" />
           </div>
         </CardHeader>

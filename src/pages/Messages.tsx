@@ -227,14 +227,14 @@ export const Messages = () => {
                             <div className="flex items-center gap-3 sm:gap-4">
                               {/* Avatar con indicador de no leído */}
                               <div className="relative">
-                                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-full bg-primary">
+                                <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center bg-primary">
                                   <span className="text-sm sm:text-base font-medium text-primary-foreground">
                                     {client.firstName[0]}
                                     {client.lastName[0]}
                                   </span>
                                 </div>
                                 {hasUnreadMessages(client.id) && (
-                                  <span className="absolute -top-1 -right-1 block h-2.5 w-2.5 sm:h-3 sm:w-3 rounded-full bg-red-500 ring-2 ring-background"></span>
+                                  <span className="absolute -top-1 -right-1 block h-2.5 w-2.5 sm:h-3 sm:w-3 bg-gold-light ring-2 ring-background"></span>
                                 )}
                               </div>
 
@@ -248,7 +248,7 @@ export const Messages = () => {
                                     {client.firstName} {client.lastName}
                                   </Link>
                                   {hasUnreadMessages(client.id) && (
-                                    <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full bg-red-500"></span>
+                                    <span className="inline-block h-1.5 w-1.5 sm:h-2 sm:w-2 bg-gold-light"></span>
                                   )}
                                 </div>
                                 {latestMessage ? (

@@ -20,7 +20,7 @@ export const Login = () => {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
         <p className="text-muted-foreground">Verificando sesión...</p>
       </div>
     );
@@ -69,18 +69,14 @@ export const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 via-background to-accent/5 p-4">
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="text-center space-y-4">
-          <div className="space-y-2">
-            <CardTitle className="text-2xl font-bold text-foreground center flex justify-center">
-              <div className="backdrop-blur-sm p-4">
-                <img src="logo11.png" alt="Logo" className='w-24' />
-              </div>
-            </CardTitle>
-
-            <p className="text-muted-foreground">Panel de asesor</p>
-          </div>
+    <div className="min-h-screen flex items-center justify-center bg-sidebar p-4">
+      <Card className="w-full max-w-md border-0">
+        <div className="brand-bar h-[3px]" />
+        <CardHeader className="items-center space-y-3 pb-4 pt-8 text-center">
+          <CardTitle className="flex justify-center">
+            <img src="logo11.png" alt="EFE Capital" className="w-24" />
+          </CardTitle>
+          <p className="eyebrow">Panel de asesor</p>
         </CardHeader>
 
         <CardContent>
@@ -135,7 +131,7 @@ export const Login = () => {
 
             <Button
               type="submit"
-              className="w-full h-11 font-medium"
+              className="w-full h-11 font-medium uppercase tracking-wider"
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Verificando...' : 'Iniciar Sesión'}

@@ -163,12 +163,12 @@ const RichTextEditor = ({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-1 p-2 border border-gray-200 rounded-t-md bg-gray-50">
+      <div className="flex flex-wrap gap-1 p-2 border border-input rounded-t-md bg-muted">
         <ToolbarButton command="bold" icon={Bold} title="Negrita (Ctrl+B)" />
         <ToolbarButton command="italic" icon={Italic} title="Cursiva (Ctrl+I)" />
         <ToolbarButton command="underline" icon={Underline} title="Subrayado (Ctrl+U)" />
         
-        <div className="w-px h-6 bg-gray-300 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
         
         <Button
           type="button"
@@ -192,17 +192,17 @@ const RichTextEditor = ({
           <ListOrdered className="h-4 w-4" />
         </Button>
         
-        <div className="w-px h-6 bg-gray-300 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
         
         <ToolbarButton command="justifyLeft" icon={AlignLeft} title="Alinear a la izquierda" />
         <ToolbarButton command="justifyCenter" icon={AlignCenter} title="Centrar" />
         <ToolbarButton command="justifyRight" icon={AlignRight} title="Alinear a la derecha" />
         
-        <div className="w-px h-6 bg-gray-300 mx-1" />
+        <div className="w-px h-6 bg-border mx-1" />
         
         <select
           onChange={(e) => executeCommand('fontSize', e.target.value)}
-          className="h-8 text-sm border border-gray-300 rounded px-2 bg-white"
+          className="h-8 text-sm border border-input rounded px-2 bg-background"
           title="Tamaño de fuente"
         >
           <option value="2">Pequeño</option>
@@ -215,8 +215,8 @@ const RichTextEditor = ({
       <div
         ref={editorRef}
         id={id}
-        className={`border border-t-0 rounded-b-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-          error ? 'border-red-500' : 'border-gray-200'
+        className={`border border-t-0 rounded-b-md focus:outline-none focus:ring-1 focus:ring-ring focus:border-ring ${
+          error ? 'border-destructive' : 'border-input'
         }`}
         style={{
           minHeight: '120px',
@@ -226,7 +226,7 @@ const RichTextEditor = ({
       />
       
       {error && (
-        <p className="text-sm text-red-600 mt-1">{error}</p>
+        <p className="text-sm text-destructive mt-1">{error}</p>
       )}
     </div>
   );

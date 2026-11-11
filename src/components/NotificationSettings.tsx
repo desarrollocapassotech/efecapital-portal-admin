@@ -37,7 +37,7 @@ export const NotificationSettings = () => {
   const getPermissionBadge = () => {
     switch (status.permission) {
       case 'granted':
-        return <Badge variant="default" className="bg-green-500">Activadas</Badge>;
+        return <Badge variant="default" className="bg-success">Activadas</Badge>;
       case 'denied':
         return <Badge variant="destructive">Bloqueadas</Badge>;
       default:
@@ -116,7 +116,7 @@ export const NotificationSettings = () => {
             </Button>
 
             {status.permission === 'denied' && (
-              <div className="rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
+              <div className="border-l-2 border-gold bg-gold/10 p-3 text-sm text-foreground">
                 <p className="font-medium">¿Cómo habilitar las notificaciones?</p>
                 <ol className="mt-2 list-decimal list-inside space-y-1">
                   <li>Haz clic en el ícono de candado o información en la barra de direcciones</li>
@@ -129,7 +129,7 @@ export const NotificationSettings = () => {
         )}
 
         {status.permission === 'granted' && (
-          <div className="rounded-lg bg-green-50 p-3 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-200">
+          <div className="border-l-2 border-success bg-success/10 p-3 text-sm text-foreground">
             <p className="font-medium">✓ Notificaciones activadas</p>
             <p className="mt-1">
               Recibirás alertas cuando lleguen mensajes nuevos de tus clientes.

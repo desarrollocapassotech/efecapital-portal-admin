@@ -18,7 +18,16 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['Inter', 'system-ui', 'sans-serif'],
+				display: ['Montserrat', 'Inter', 'system-ui', 'sans-serif']
+			},
 			colors: {
+				gold: {
+					DEFAULT: 'hsl(var(--gold))',
+					light: 'hsl(var(--gold-light))',
+					foreground: 'hsl(var(--gold-foreground))'
+				},
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
@@ -73,6 +82,10 @@ export default {
 				}
 			},
 			borderRadius: {
+				DEFAULT: 'var(--radius)',
+				'3xl': 'var(--radius)',
+				'2xl': 'var(--radius)',
+				xl: 'var(--radius)',
 				lg: 'var(--radius)',
 				md: 'calc(var(--radius) - 2px)',
 				sm: 'calc(var(--radius) - 4px)'

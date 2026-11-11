@@ -41,7 +41,7 @@ export const NotificationTester = () => {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+        <div className="border-l-2 border-primary bg-secondary p-4 text-sm text-foreground">
           <p className="font-medium">ℹ️ Instrucciones de prueba:</p>
           <ol className="mt-2 list-decimal list-inside space-y-1">
             <li>Asegúrate de que las notificaciones estén activadas</li>
@@ -134,7 +134,7 @@ export const NotificationTester = () => {
         </div>
 
         {!isPermissionGranted() && (
-          <div className="rounded-lg bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-200">
+          <div className="border-l-2 border-gold bg-gold/10 p-3 text-sm text-foreground">
             <p className="font-medium">⚠️ Notificaciones no activadas</p>
             <p className="mt-1">
               Ve a la configuración de notificaciones para activarlas antes de probar.

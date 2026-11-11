@@ -1,75 +1,64 @@
 import { Link } from 'react-router-dom';
-import { Users, MessageCircle, FileText } from 'lucide-react';
+import { Users, MessageCircle, FileText, ArrowRight, type LucideIcon } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+
+type Tile = {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  value: number | string;
+  caption: string;
+  highlight?: boolean;
+};
 
 const Index = () => {
   const { clients, messages, documents } = useDataStore();
-  
+
   // Calcular mensajes no leídos
-  const unreadMessages = messages.filter(m => !m.isFromAdvisor && !m.read).length;
+  const unreadMessages = messages.filter((m) => !m.isFromAdvisor && !m.read).length;
   const displayUnreadCount = unreadMessages > 99 ? '99+' : unreadMessages;
 
+  const tiles: Tile[] = [
+    { to: '/clients', label: 'Clientes', icon: Users, value: clients.length, caption: 'Clientes registrados' },
+    {
+      to: '/messages',
+      label: 'Mensajes',
+      icon: MessageCircle,
+      value: displayUnreadCount,
+      caption: unreadMessages === 1 ? 'Mensaje sin leer' : 'Mensajes sin leer',
+      highlight: unreadMessages > 0,
+    },
+    { to: '/reports', label: 'Informes', icon: FileText, value: documents.length, caption: 'Informes publicados' },
+  ];
+
   return (
-    <div className="flex-1 p-3 sm:p-6 space-y-4 sm:space-y-6 pt-16 lg:pt-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center space-y-2 px-4 mb-8">
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">Panel de Administración</h1>
-        </div>
-
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 md:grid-cols-3">
-          {/* Tarjeta de Clientes */}
-          <Link to="/clients" className="group">
-            <Card className="h-full hover:shadow-lg transition-all duration-200 hover:scale-105">
-              <CardContent className="p-6 text-center">
-                <div className="flex justify-center mb-4">
-                  <div className="p-4 rounded-full bg-blue-100 dark:bg-blue-900/20 group-hover:bg-blue-200 dark:group-hover:bg-blue-900/30 transition-colors">
-                    <Users className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                  </div>
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">Clientes</h3>
-                <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{clients.length}</p>
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* Tarjeta de Chats */}
-          <Link to="/messages" className="group">
-            <Card className="h-full hover:shadow-lg transition-all duration-200 hover:scale-105">
-              <CardContent className="p-6 text-center relative">
-                <div className="flex justify-center mb-4">
-                  <div className="p-4 rounded-full bg-green-100 dark:bg-green-900/20 group-hover:bg-green-200 dark:group-hover:bg-green-900/30 transition-colors">
-                    <MessageCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
-                  </div>
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">Mensajes</h3>
-                {unreadMessages > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute top-4 right-4 h-6 min-w-[1.5rem] px-2 text-xs"
-                  >
-                    {displayUnreadCount}
-                  </Badge>
-                )}
-              </CardContent>
-            </Card>
-          </Link>
-
-          {/* Tarjeta de Informes */}
-          <Link to="/reports" className="group">
-            <Card className="h-full hover:shadow-lg transition-all duration-200 hover:scale-105">
-              <CardContent className="p-6 text-center">
-                <div className="flex justify-center mb-4">
-                  <div className="p-4 rounded-full bg-purple-100 dark:bg-purple-900/20 group-hover:bg-purple-200 dark:group-hover:bg-purple-900/30 transition-colors">
-                    <FileText className="h-8 w-8 text-purple-600 dark:text-purple-400" />
-                  </div>
-                </div>
-                <h3 className="text-xl font-semibold text-foreground mb-2">Informes</h3>
-                <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{documents.length}</p>
-              </CardContent>
-            </Card>
-          </Link>
+    <div className="flex-1 p-4 sm:p-8 pt-20 lg:pt-8">
+      <div className="mx-auto max-w-5xl">
+        <div className="grid grid-cols-1 gap-px border border-border bg-border md:grid-cols-3">
+          {tiles.map(({ to, label, icon: Icon, value, caption, highlight }) => (
+            <Link
+              key={to}
+              to={to}
+              className="group relative flex flex-col bg-card p-6 transition-colors hover:bg-secondary"
+            >
+              <span className="brand-bar absolute inset-x-0 top-0 h-[2px] opacity-0 transition-opacity group-hover:opacity-100" />
+              <div className="flex items-center justify-between">
+                <span className="eyebrow">{label}</span>
+                <Icon className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <p
+                className={`mt-6 font-display text-4xl font-semibold tabular-nums ${
+                  highlight ? 'text-gold' : 'text-primary'
+                }`}
+              >
+                {value}
+              </p>
+              <div className="mt-2 flex items-center justify-between text-sm text-muted-foreground">
+                <span>{caption}</span>
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </div>

@@ -99,13 +99,13 @@ const ClientDetail = () => {
   const getTipoInversorColor = (tipo: string) => {
     switch (tipo) {
       case 'Conservador':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-primary/10 text-primary';
       case 'Moderado':
-        return 'bg-green-100 text-green-800';
+        return 'bg-gold/10 text-gold';
       case 'Agresivo':
-        return 'bg-red-100 text-red-800';
+        return 'bg-destructive/10 text-destructive';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-muted text-muted-foreground';
     }
   };
 
