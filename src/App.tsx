@@ -14,6 +14,8 @@ import ClientChat from "./pages/ClientChat";
 import { Reports } from "./pages/Reports";
 import ReportsHistory from "./pages/ReportsHistory";
 import NotFound from "./pages/NotFound";
+import { Invoices } from "./pages/Invoices";
+import { InvoiceForm } from "./pages/InvoiceForm";
 import Index from "./pages/Index";
 import { useAuthStore } from "@/stores/authStore";
 import { useDataStore } from "@/stores/dataStore";
@@ -69,6 +71,8 @@ const App = () => {
               <Route path="clients/:id" element={<ClientDetail />} />
               <Route path="clients/:id/edit" element={<ClientForm />} />
               <Route path="clients/new" element={<ClientForm />} />
+              <Route path="invoices" element={<Invoices />} />
+              <Route path="invoices/new" element={<InvoiceForm />} />
               <Route path="messages" element={<PreviewRoute><Messages /></PreviewRoute>} />
               <Route path="messages/:id" element={<PreviewRoute><ClientChat /></PreviewRoute>} />
               <Route path="reports" element={<PreviewRoute><Reports /></PreviewRoute>} />

@@ -6,6 +6,14 @@ React + Vite + TypeScript + Tailwind + shadcn/ui. Firebase para auth y datos (`s
 
 La pantalla de inicio es **Clientes**: `/` redirige a `/clients`. El Dashboard (`src/pages/Index.tsx`) se considera redundante y es un módulo más "en desarrollo": solo aparece (ruta `/` + ítem del menú) con el switch activo.
 
+## Facturas (Faktia)
+
+Las facturas se emiten con **Faktia** (proyecto en `../../FAKTIA`, API pública `/api/v1`), que es la fuente de verdad: número, CAE y PDF salen de ahí. No se guardan facturas en Firestore.
+- Cliente HTTP en `src/lib/faktia.ts`. Sin API key en el navegador: cada llamada va con el ID token de Firebase del usuario y Faktia lo valida (federación, `FIREBASE_FEDERACION` en faktia-backend; ver `docs/PRODUCCION.md` allá).
+- Config: `VITE_FAKTIA_API_URL` (ver `.env.example`).
+- Cliente EFE ↔ cliente Faktia: se asocian por `referenciaExterna` = id del cliente en Firestore (`faktia.asegurarCliente`). Para facturar, el cliente necesita `fiscal` (documento + condición IVA), que se carga en el formulario de cliente.
+- Pantallas: `/invoices` (listado, emitir borradores, PDF) y `/invoices/new`. La futura **cuenta corriente** (pagos/saldos) va aparte y se apoya en estos comprobantes.
+
 ## Brokers
 
 Un cliente puede tener varios brokers. Lógica en `src/lib/brokers.ts`.

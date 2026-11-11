@@ -200,6 +200,7 @@ export const useDataStore = create<DataStore>((set, get) => {
               objectives: data.objectives ?? '',
               investmentHorizon: data.investmentHorizon ?? '',
               brokers: brokersFromClientData(data),
+              fiscal: data.fiscal && typeof data.fiscal === 'object' ? (data.fiscal as Client['fiscal']) : undefined,
               notes: normalizeNotes(data.notes),
               lastContact,
               createdAt,
@@ -328,6 +329,7 @@ export const useDataStore = create<DataStore>((set, get) => {
           markCollectionAsLoaded('documents');
         });
       }
+
     },
 
     stopDataListeners: () => {
@@ -401,6 +403,7 @@ export const useDataStore = create<DataStore>((set, get) => {
         investmentHorizon: clientData.investmentHorizon,
         brokers,
         broker: formatBrokers(brokers), // compatibilidad con el portal de clientes
+        ...(clientData.fiscal ? { fiscal: clientData.fiscal } : {}),
         notes,
         lastContact: clientData.lastContact
           ? Timestamp.fromDate(new Date(clientData.lastContact))
@@ -440,6 +443,7 @@ export const useDataStore = create<DataStore>((set, get) => {
         payload.broker = formatBrokers(brokers); // compatibilidad con el portal de clientes
       }
       if (Array.isArray(updates.notes)) payload.notes = updates.notes;
+      if ('fiscal' in updates) payload.fiscal = updates.fiscal ?? null;
       if (updates.lastContact) {
         payload.lastContact = Timestamp.fromDate(new Date(updates.lastContact));
       }

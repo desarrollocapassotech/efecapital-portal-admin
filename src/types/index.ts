@@ -9,9 +9,20 @@ export interface Client {
   investmentHorizon: string;
   /** Nombres canónicos de los brokers del cliente (ver src/lib/brokers.ts) */
   brokers: string[];
+  /** Datos fiscales para facturar con Faktia (opcionales hasta la primera factura) */
+  fiscal?: ClientFiscal;
   notes?: Note[];
   lastContact: Date;
   createdAt: Date;
+}
+
+export interface ClientFiscal {
+  tipoDocumento: 'CUIT' | 'CUIL' | 'DNI' | 'PASAPORTE';
+  numeroDocumento: string;
+  condicionIva: import('@/lib/faktia').CondicionIva;
+  /** Si se omite, se usa nombre y apellido */
+  razonSocial?: string;
+  domicilio?: string;
 }
 
 export interface Broker {

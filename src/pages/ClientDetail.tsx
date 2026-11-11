@@ -11,8 +11,10 @@ import {
   Phone,
   Clock,
   CalendarDays,
+  FileText,
   type LucideIcon,
 } from 'lucide-react';
+import { CONDICIONES_IVA } from '@/lib/faktia';
 import { CopyableText } from '@/components/CopyButton';
 import { useDataStore } from '@/stores/dataStore';
 import { useShowPreviewModules } from '@/stores/previewStore';
@@ -196,6 +198,23 @@ const ClientDetail = () => {
               <span className="text-sm tabular-nums">
                 {client.createdAt ? format(new Date(client.createdAt), 'dd/MM/yyyy', { locale: es }) : '—'}
               </span>
+            </InfoRow>
+
+            <InfoRow icon={FileText} label="Fiscal">
+              {client.fiscal ? (
+                <div className="text-sm leading-snug">
+                  <p className="tabular-nums">
+                    {client.fiscal.tipoDocumento} {client.fiscal.numeroDocumento}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {CONDICIONES_IVA.find((c) => c.value === client.fiscal!.condicionIva)?.label}
+                  </p>
+                </div>
+              ) : (
+                <Link to={`/clients/${id}/edit`} className="text-sm text-primary underline-offset-4 hover:underline">
+                  Completar datos fiscales
+                </Link>
+              )}
             </InfoRow>
 
             <InfoRow icon={Phone} label="Teléfono">

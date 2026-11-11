@@ -23,11 +23,18 @@ export const ClientCombobox = ({
   value,
   onChange,
   id,
+  allowAll = true,
+  placeholder = 'Todos',
+  invalid = false,
 }: {
   clients: Client[];
   value: string;
   onChange: (clientId: string) => void;
   id?: string;
+  /** Muestra la opción "Todos" y la × para limpiar (filtros). En formularios va en false. */
+  allowAll?: boolean;
+  placeholder?: string;
+  invalid?: boolean;
 }) => {
   const [open, setOpen] = useState(false);
   const selected = clients.find((c) => c.id === value);
@@ -42,15 +49,17 @@ export const ClientCombobox = ({
             type="button"
             role="combobox"
             aria-expanded={open}
-            className="flex h-10 w-full items-center justify-between border border-input bg-background px-3 text-left text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            className={`flex h-10 w-full items-center justify-between border bg-background px-3 text-left text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
+              invalid ? 'border-destructive' : 'border-input'
+            }`}
           >
             <span className={`truncate ${selected ? 'text-foreground' : 'text-muted-foreground'}`}>
-              {selected ? fullName(selected) : 'Todos'}
+              {selected ? fullName(selected) : placeholder}
             </span>
-            <ChevronsUpDown className={`h-4 w-4 shrink-0 opacity-50 ${selected ? 'invisible' : ''}`} />
+            <ChevronsUpDown className={`h-4 w-4 shrink-0 opacity-50 ${selected && allowAll ? 'invisible' : ''}`} />
           </button>
         </PopoverTrigger>
-        {selected && (
+        {selected && allowAll && (
           <button
             type="button"
             onClick={() => onChange('')}
@@ -69,16 +78,18 @@ export const ClientCombobox = ({
           <CommandList>
             <CommandEmpty>No se encontraron clientes.</CommandEmpty>
             <CommandGroup>
-              <CommandItem
-                value="__todos__ todos"
-                onSelect={() => {
-                  onChange('');
-                  setOpen(false);
-                }}
-              >
-                <Check className={`mr-2 h-4 w-4 ${!value ? 'opacity-100' : 'opacity-0'}`} />
-                Todos
-              </CommandItem>
+              {allowAll && (
+                <CommandItem
+                  value="__todos__ todos"
+                  onSelect={() => {
+                    onChange('');
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={`mr-2 h-4 w-4 ${!value ? 'opacity-100' : 'opacity-0'}`} />
+                  Todos
+                </CommandItem>
+              )}
               {sorted.map((client) => (
                 <CommandItem
                   key={client.id}

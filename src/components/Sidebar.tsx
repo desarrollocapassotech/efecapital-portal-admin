@@ -8,6 +8,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   FlaskConical,
+  Receipt,
 } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { usePreviewStore } from '@/stores/previewStore';
@@ -19,6 +20,7 @@ import { useState, useEffect, useRef } from 'react';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, preview: true },
   { name: 'Clientes', href: '/clients', icon: Users },
+  { name: 'Facturas', href: '/invoices', icon: Receipt },
   { name: 'Mensajes', href: '/messages', icon: MessageCircle, preview: true },
   { name: 'Informes', href: '/reports', icon: FileText, preview: true },
 ];

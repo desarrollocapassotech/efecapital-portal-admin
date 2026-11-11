@@ -1,5 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { BrokerPicker } from '@/components/BrokerPicker';
+import {
+  FiscalFields,
+  fiscalDraftFrom,
+  fiscalFromDraft,
+  validarFiscal,
+  type FiscalDraft,
+} from '@/components/FiscalFields';
 import { buildBrokerOptions } from '@/lib/brokers';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { PageHeader } from '@/components/PageHeader';
@@ -263,6 +270,9 @@ export const ClientForm = () => {
     [brokers, existingClient]
   );
 
+  const [fiscalDraft, setFiscalDraft] = useState<FiscalDraft>(fiscalDraftFrom(existingClient?.fiscal));
+  const [fiscalError, setFiscalError] = useState('');
+
   const handleBrokersChange = (next: string[]) => {
     setSelectedBrokers(next);
     if (next.length > 0) setBrokersError('');
@@ -361,7 +371,10 @@ export const ClientForm = () => {
     const brokersMessage = selectedBrokers.length > 0 ? '' : 'Selecciona al menos un broker';
     setBrokersError(brokersMessage);
 
-    return Object.keys(newErrors).length === 0 && !brokersMessage;
+    const fiscalMessage = validarFiscal(fiscalDraft);
+    setFiscalError(fiscalMessage);
+
+    return Object.keys(newErrors).length === 0 && !brokersMessage && !fiscalMessage;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -396,6 +409,7 @@ export const ClientForm = () => {
         objectives: formData.objectives,
         investmentHorizon: formData.investmentHorizon,
         brokers: selectedBrokers,
+        fiscal: fiscalFromDraft(fiscalDraft),
       };
 
       if (isEditing) {
@@ -579,6 +593,26 @@ export const ClientForm = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* Datos fiscales: opcionales al dar de alta, necesarios para facturar con Faktia */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Datos fiscales</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Necesarios para emitirle facturas. Podés completarlos ahora o antes de la primera factura.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <FiscalFields
+              value={fiscalDraft}
+              onChange={(next) => {
+                setFiscalDraft(next);
+                if (fiscalError) setFiscalError(validarFiscal(next));
+              }}
+              error={fiscalError}
+            />
+          </CardContent>
+        </Card>
 
         {/* Full-width sections */}
         <Card>
