@@ -1,4 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { BrokerPicker } from '@/components/BrokerPicker';
+import { buildBrokerOptions } from '@/lib/brokers';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Save, Bold, Italic, Underline, List, ListOrdered, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
@@ -18,7 +20,6 @@ type FormState = {
   investorProfile: 'Conservador' | 'Moderado' | 'Agresivo';
   objectives: string;
   investmentHorizon: string;
-  broker: string;
   notes: string;
 };
 
@@ -249,9 +250,21 @@ export const ClientForm = () => {
     investorProfile: existingClient?.investorProfile ?? 'Moderado',
     objectives: existingClient?.objectives ?? '',
     investmentHorizon: existingClient?.investmentHorizon ?? '',
-    broker: existingClient?.broker ?? '',
     notes: '',
   });
+
+  // Brokers: selección múltiple, se maneja aparte del resto de campos de texto
+  const [selectedBrokers, setSelectedBrokers] = useState<string[]>(existingClient?.brokers ?? []);
+  const [brokersError, setBrokersError] = useState('');
+  const brokerOptions = useMemo(
+    () => buildBrokerOptions(brokers.map((b) => b.name), existingClient?.brokers ?? []),
+    [brokers, existingClient]
+  );
+
+  const handleBrokersChange = (next: string[]) => {
+    setSelectedBrokers(next);
+    if (next.length > 0) setBrokersError('');
+  };
 
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [touchedFields, setTouchedFields] = useState<Partial<Record<keyof FormState, boolean>>>({});
@@ -292,8 +305,6 @@ export const ClientForm = () => {
       }
       case 'investmentHorizon':
         return value.trim() ? '' : 'El horizonte de inversión es requerido';
-      case 'broker':
-        return value.trim() ? '' : 'El broker es requerido';
       default:
         return '';
     }
@@ -322,7 +333,6 @@ export const ClientForm = () => {
       'phone',
       'objectives',
       'investmentHorizon',
-      'broker'
     ];
 
     const newErrors: Partial<Record<keyof FormState, string>> = {};
@@ -345,7 +355,11 @@ export const ClientForm = () => {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+    const brokersMessage = selectedBrokers.length > 0 ? '' : 'Selecciona al menos un broker';
+    setBrokersError(brokersMessage);
+
+    return Object.keys(newErrors).length === 0 && !brokersMessage;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -379,7 +393,7 @@ export const ClientForm = () => {
         investorProfile: formData.investorProfile,
         objectives: formData.objectives,
         investmentHorizon: formData.investmentHorizon,
-        broker: formData.broker,
+        brokers: selectedBrokers,
       };
 
       if (isEditing) {
@@ -432,9 +446,6 @@ export const ClientForm = () => {
           <h1 className="text-3xl font-bold text-foreground">
             {isEditing ? 'Editar Cliente' : 'Nuevo Cliente'}
           </h1>
-          <p className="text-muted-foreground">
-            {isEditing ? 'Actualiza la información del cliente' : 'Registra un nuevo cliente en el sistema'}
-          </p>
         </div>
       </div>
 
@@ -540,24 +551,17 @@ export const ClientForm = () => {
               </div>
 
               <div>
-                <Label htmlFor="broker">Broker *</Label>
-                <Input
-                  id="broker"
-                  value={formData.broker}
-                  onChange={(e) => handleChange('broker', e.target.value)}
-                  onBlur={() => handleBlur('broker')}
-                  placeholder="Ej: Banco Galicia, Invertir Online"
-                  className={errors.broker ? 'border-destructive' : ''}
-                  list="brokers-list"
+                <Label htmlFor="brokers">Brokers *</Label>
+                <p className="mb-2 text-sm text-muted-foreground">
+                  Selecciona uno o más. Si no está en la lista, agrégalo abajo.
+                </p>
+                <BrokerPicker
+                  id="brokers"
+                  options={brokerOptions}
+                  value={selectedBrokers}
+                  onChange={handleBrokersChange}
+                  error={brokersError}
                 />
-                <datalist id="brokers-list">
-                  {brokers.map((broker) => (
-                    <option key={broker.id} value={broker.name} />
-                  ))}
-                </datalist>
-                {errors.broker && (
-                  <p className="text-sm text-destructive mt-1">{errors.broker}</p>
-                )}
               </div>
 
               <div>

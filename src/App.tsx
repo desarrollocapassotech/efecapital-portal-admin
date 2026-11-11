@@ -14,12 +14,13 @@ import ClientChat from "./pages/ClientChat";
 import { Reports } from "./pages/Reports";
 import ReportsHistory from "./pages/ReportsHistory";
 import NotFound from "./pages/NotFound";
+import Index from "./pages/Index";
 import { useAuthStore } from "@/stores/authStore";
 import { useDataStore } from "@/stores/dataStore";
 import { useNotificationSetup } from "@/hooks/useNotificationSetup";
 import { useShowPreviewModules } from "@/stores/previewStore";
 
-/** Mensajes e Informes: si los módulos en desarrollo están ocultos, redirige a Clientes. */
+/** Dashboard, Mensajes e Informes: si los módulos en desarrollo están ocultos, redirige a Clientes. */
 const PreviewRoute = ({ children }: { children: JSX.Element }) =>
   useShowPreviewModules() ? children : <Navigate to="/clients" replace />;
 
@@ -62,8 +63,8 @@ const App = () => {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Layout />}>
-              {/* El Dashboard está oculto (redundante): la pantalla de inicio es Clientes */}
-              <Route index element={<Navigate to="/clients" replace />} />
+              {/* Dashboard: solo con "En desarrollo" activo; si no, el inicio es Clientes */}
+              <Route index element={<PreviewRoute><Index /></PreviewRoute>} />
               <Route path="clients" element={<Clients />} />
               <Route path="clients/:id" element={<ClientDetail />} />
               <Route path="clients/:id/edit" element={<ClientForm />} />

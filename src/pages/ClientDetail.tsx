@@ -42,7 +42,7 @@ const ClientDetail = () => {
     id: client.id,
     nombre: `${client.firstName} ${client.lastName}`,
     tipoInversor: client.investorProfile,
-    broker: client.broker,
+    brokers: client.brokers,
     objetivos: client.objectives,
     telefono: client.phone,
     email: client.email,
@@ -99,12 +99,13 @@ const ClientDetail = () => {
   };
 
   const getTipoInversorColor = (tipo: string) => {
-    switch (tipo) {
-      case 'Conservador':
+    // El formulario guarda el perfil en minúsculas; comparar sin distinguir mayúsculas
+    switch (tipo?.toLowerCase()) {
+      case 'conservador':
         return 'bg-primary/10 text-primary';
-      case 'Moderado':
+      case 'moderado':
         return 'bg-gold/10 text-gold';
-      case 'Agresivo':
+      case 'agresivo':
         return 'bg-destructive/10 text-destructive';
       default:
         return 'bg-muted text-muted-foreground';
@@ -164,11 +165,21 @@ const ClientDetail = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Bróker</CardTitle>
+              <CardTitle className="text-sm font-medium">{user.brokers.length > 1 ? 'Brokers' : 'Broker'}</CardTitle>
               <Building className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-lg font-medium">{user.broker}</div>
+              {user.brokers.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {user.brokers.map((broker) => (
+                    <span key={broker} className="border border-border bg-secondary px-2 py-0.5 text-sm font-medium">
+                      {broker}
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground">Sin asignar</div>
+              )}
             </CardContent>
           </Card>
         </div>

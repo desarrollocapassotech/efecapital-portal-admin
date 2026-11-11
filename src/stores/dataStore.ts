@@ -27,6 +27,14 @@ import {
   Notification,
 } from '@/types';
 import { notificationService } from '@/lib/notifications';
+import {
+  DEFAULT_BROKERS,
+  brokersFromClientData,
+  canonicalBrokerName,
+  formatBrokers,
+  normalizeBrokerList,
+  sameBroker,
+} from '@/lib/brokers';
 
 const toDate = (value: unknown): Date => {
   if (value instanceof Timestamp) {
@@ -115,6 +123,8 @@ export const useDataStore = create<DataStore>((set, get) => {
   let messagesUnsubscribe: Unsubscribe | null = null;
   let brokersUnsubscribe: Unsubscribe | null = null;
   let documentsUnsubscribe: Unsubscribe | null = null;
+  const migratedClientIds = new Set<string>();
+  let defaultBrokersEnsured = false;
 
   const collectionsLoaded: Record<CollectionKey, boolean> = {
     clients: false,
@@ -189,7 +199,7 @@ export const useDataStore = create<DataStore>((set, get) => {
               investorProfile: data.investorProfile ?? 'Moderado',
               objectives: data.objectives ?? '',
               investmentHorizon: data.investmentHorizon ?? '',
-              broker: data.broker ?? '',
+              brokers: brokersFromClientData(data),
               notes: normalizeNotes(data.notes),
               lastContact,
               createdAt,
@@ -198,6 +208,20 @@ export const useDataStore = create<DataStore>((set, get) => {
 
           set({ clients });
           markCollectionAsLoaded('clients');
+
+          // Migración única: clientes con `broker` como texto libre ("BMB y IOL") y sin `brokers`
+          // se reescriben con la lista normalizada. Idempotente: solo toca docs sin `brokers`.
+          snapshot.docs.forEach((docSnapshot) => {
+            if (migratedClientIds.has(docSnapshot.id)) return;
+            const data = docSnapshot.data();
+            if (Array.isArray(data.brokers)) return;
+            migratedClientIds.add(docSnapshot.id);
+            const brokers = brokersFromClientData(data);
+            updateDoc(docSnapshot.ref, { brokers, broker: formatBrokers(brokers) }).catch((error) => {
+              migratedClientIds.delete(docSnapshot.id);
+              console.error('No se pudo normalizar los brokers del cliente', docSnapshot.id, error);
+            });
+          });
         });
       }
 
@@ -257,6 +281,16 @@ export const useDataStore = create<DataStore>((set, get) => {
 
           set({ brokers });
           markCollectionAsLoaded('brokers');
+
+          // Asegurar que existan los brokers base (BMB, IOL, Balanz)
+          if (!defaultBrokersEnsured) {
+            defaultBrokersEnsured = true;
+            DEFAULT_BROKERS.forEach((name) => {
+              get().ensureBrokerExists(name).catch((error) => {
+                console.error('No se pudo crear el broker base', name, error);
+              });
+            });
+          }
         });
       }
 
@@ -326,14 +360,12 @@ export const useDataStore = create<DataStore>((set, get) => {
     },
 
     ensureBrokerExists: async (name: string) => {
-      const trimmedName = name.trim();
+      const trimmedName = canonicalBrokerName(name, get().brokers.map((b) => b.name));
       if (!trimmedName) {
         return;
       }
 
-      const existing = get().brokers.find(
-        (broker) => broker.name.toLowerCase() === trimmedName.toLowerCase()
-      );
+      const existing = get().brokers.find((broker) => sameBroker(broker.name, trimmedName));
 
       if (existing) {
         return;
@@ -354,7 +386,8 @@ export const useDataStore = create<DataStore>((set, get) => {
     },
 
     addClient: async (clientData) => {
-      await get().ensureBrokerExists(clientData.broker);
+      const brokers = normalizeBrokerList(clientData.brokers, get().brokers.map((b) => b.name));
+      await Promise.all(brokers.map((name) => get().ensureBrokerExists(name)));
 
       const notes = Array.isArray(clientData.notes) ? clientData.notes : [];
 
@@ -366,7 +399,8 @@ export const useDataStore = create<DataStore>((set, get) => {
         investorProfile: clientData.investorProfile,
         objectives: clientData.objectives,
         investmentHorizon: clientData.investmentHorizon,
-        broker: clientData.broker,
+        brokers,
+        broker: formatBrokers(brokers), // compatibilidad con el portal de clientes
         notes,
         lastContact: clientData.lastContact
           ? Timestamp.fromDate(new Date(clientData.lastContact))
@@ -384,8 +418,11 @@ export const useDataStore = create<DataStore>((set, get) => {
     },
 
     updateClient: async (id, updates) => {
-      if (updates.broker) {
-        await get().ensureBrokerExists(updates.broker);
+      const brokers = Array.isArray(updates.brokers)
+        ? normalizeBrokerList(updates.brokers, get().brokers.map((b) => b.name))
+        : null;
+      if (brokers) {
+        await Promise.all(brokers.map((name) => get().ensureBrokerExists(name)));
       }
 
       const clientRef = doc(db, 'clients', id);
@@ -398,7 +435,10 @@ export const useDataStore = create<DataStore>((set, get) => {
       if (typeof updates.investorProfile === 'string') payload.investorProfile = updates.investorProfile;
       if (typeof updates.objectives === 'string') payload.objectives = updates.objectives;
       if (typeof updates.investmentHorizon === 'string') payload.investmentHorizon = updates.investmentHorizon;
-      if (typeof updates.broker === 'string') payload.broker = updates.broker;
+      if (brokers) {
+        payload.brokers = brokers;
+        payload.broker = formatBrokers(brokers); // compatibilidad con el portal de clientes
+      }
       if (Array.isArray(updates.notes)) payload.notes = updates.notes;
       if (updates.lastContact) {
         payload.lastContact = Timestamp.fromDate(new Date(updates.lastContact));

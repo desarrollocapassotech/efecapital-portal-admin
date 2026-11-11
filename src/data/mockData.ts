@@ -10,7 +10,7 @@ export const mockClients: Client[] = [
     investorProfile: 'Conservador',
     objectives: 'Preservación de capital y crecimiento a largo plazo',
     investmentHorizon: '10-15 años',
-    broker: 'Banco Galicia',
+    brokers: ['Banco Galicia'],
     notes: [
       {
         text: 'Cliente muy meticulosa, prefiere inversiones de bajo riesgo. Tiene experiencia previa con fondos comunes.',
@@ -29,7 +29,7 @@ export const mockClients: Client[] = [
     investorProfile: 'Agresivo',
     objectives: 'Máximo crecimiento del capital',
     investmentHorizon: '5-7 años',
-    broker: 'Invertir Online',
+    brokers: ['Invertir Online'],
     notes: [
       {
         text: 'Cliente muy meticulosa, prefiere inversiones de bajo riesgo. Tiene experiencia previa con fondos comunes.',
@@ -48,7 +48,7 @@ export const mockClients: Client[] = [
     investorProfile: 'Moderado',
     objectives: 'Diversificación y crecimiento balanceado',
     investmentHorizon: '7-10 años',
-    broker: 'BYMA',
+    brokers: ['BYMA'],
     notes: [
       {
         text: 'Cliente muy meticulosa, prefiere inversiones de bajo riesgo. Tiene experiencia previa con fondos comunes.',
@@ -67,7 +67,7 @@ export const mockClients: Client[] = [
     investorProfile: 'Conservador',
     objectives: 'Ingresos regulares y seguridad',
     investmentHorizon: '3-5 años',
-    broker: 'Banco Santander',
+    brokers: ['Banco Santander'],
     notes: [
       {
         text: 'Cliente muy meticulosa, prefiere inversiones de bajo riesgo. Tiene experiencia previa con fondos comunes.',
@@ -86,7 +86,7 @@ export const mockClients: Client[] = [
     investorProfile: 'Moderado',
     objectives: 'Crecimiento para compra de vivienda',
     investmentHorizon: '2-3 años',
-    broker: 'Portfolio Personal',
+    brokers: ['Portfolio Personal'],
     notes: [
       {
         text: 'Cliente muy meticulosa, prefiere inversiones de bajo riesgo. Tiene experiencia previa con fondos comunes.',
@@ -288,7 +288,7 @@ export const getMockDataForUser = (userId: string) => {
     // Datos del cliente
     nombre: client ? `${client.firstName} ${client.lastName}` : 'Cliente Desconocido',
     tipoInversor: client?.investorProfile,
-    broker: client?.broker,
+    broker: client?.brokers.join(', '),
     objetivos: client?.objectives,
     telefono: client?.phone,
     email: client?.email,

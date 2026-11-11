@@ -4,6 +4,7 @@ import {
   MessageCircle,
   FileText,
   Menu,
+  LayoutDashboard,
   PanelLeftClose,
   PanelLeftOpen,
   FlaskConical,
@@ -16,6 +17,7 @@ import { useState, useEffect, useRef } from 'react';
 
 // `preview: true` = módulo en desarrollo, oculto salvo que el usuario active "Módulos en desarrollo"
 const navigation = [
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard, preview: true },
   { name: 'Clientes', href: '/clients', icon: Users },
   { name: 'Mensajes', href: '/messages', icon: MessageCircle, preview: true },
   { name: 'Informes', href: '/reports', icon: FileText, preview: true },

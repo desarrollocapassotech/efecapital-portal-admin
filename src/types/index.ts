@@ -7,7 +7,8 @@ export interface Client {
   investorProfile: 'Conservador' | 'Moderado' | 'Agresivo';
   objectives: string;
   investmentHorizon: string;
-  broker: string;
+  /** Nombres canónicos de los brokers del cliente (ver src/lib/brokers.ts) */
+  brokers: string[];
   notes?: Note[];
   lastContact: Date;
   createdAt: Date;

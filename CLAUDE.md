@@ -4,13 +4,22 @@ React + Vite + TypeScript + Tailwind + shadcn/ui. Firebase para auth y datos (`s
 
 ## Navegación
 
-La pantalla de inicio es **Clientes**: `/` redirige a `/clients`. El Dashboard (`src/pages/Index.tsx`) está oculto por redundante: no tiene ruta ni ítem en el menú.
+La pantalla de inicio es **Clientes**: `/` redirige a `/clients`. El Dashboard (`src/pages/Index.tsx`) se considera redundante y es un módulo más "en desarrollo": solo aparece (ruta `/` + ítem del menú) con el switch activo.
+
+## Brokers
+
+Un cliente puede tener varios brokers. Lógica en `src/lib/brokers.ts`.
+
+- Fuente de verdad: `brokers: string[]` en el doc del cliente, con nombres canónicos (`BMB`, `IOL`, `Balanz`, + los que se agreguen).
+- Se sigue escribiendo `broker: string` (nombres unidos por ", ") porque el portal de clientes todavía lee ese campo.
+- Datos viejos con texto libre ("BMB y IOL", "Invertir Online") se separan y mapean al leer; además el store reescribe una vez los docs que no tienen `brokers`.
+- Los brokers base se crean en la colección `brokers` si faltan. En el alta/edición (`BrokerPicker`) se eligen varios o se agrega uno nuevo, que se crea en la colección al guardar.
 
 ## Módulos en desarrollo
 
 El foco actual es el **facturador**. **Mensajes** e **Informes** todavía no se usan: están ocultos por defecto detrás de `usePreviewStore` / `useShowPreviewModules` (`src/stores/previewStore.ts`, guardado en localStorage). El usuario los puede mostrar con el switch "En desarrollo" del menú lateral, y ahí aparecen con la etiqueta "Beta".
 
-Lo que respeta ese flag: ítems del menú (`preview: true` en `Sidebar.tsx`), ícono de mensajes de la barra móvil, tarjetas del Dashboard (oculto), botones "Chat" en Clientes y Detalle de cliente, rutas `/messages*` y `/reports*` (`PreviewRoute` en `App.tsx`, redirige a `/clients`) y notificaciones push de mensajes. Cualquier entrada nueva a estos módulos tiene que pasar por el mismo flag.
+Lo que respeta ese flag: ítems del menú (`preview: true` en `Sidebar.tsx`), ícono de mensajes de la barra móvil, tarjetas del Dashboard, botones "Chat" en Clientes y Detalle de cliente, rutas `/`, `/messages*` y `/reports*` (`PreviewRoute` en `App.tsx`, redirige a `/clients`) y notificaciones push de mensajes. Cualquier entrada nueva a estos módulos tiene que pasar por el mismo flag.
 
 ## Estilo visual
 
