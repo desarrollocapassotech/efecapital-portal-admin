@@ -4,7 +4,7 @@ React + Vite + TypeScript + Tailwind + shadcn/ui. Firebase para auth y datos (`s
 
 ## Navegación
 
-La pantalla de inicio es el **Dashboard** (`/`, `src/pages/Index.tsx`): un resumen completo con el recordatorio de facturación pendiente del mes vencido, el estado de suscripciones y comisiones (facturadas sobre el total), y la cartera (clientes e ingreso mensual), más la lista de pendientes. Usa `useFacturacionPeriodo` (`src/hooks/`), el mismo hook que Facturación mensual. No muestra nada de Mensajes ni Informes.
+La pantalla de inicio es el **Dashboard** (`/`, `src/pages/Index.tsx`): un resumen completo con el recordatorio de facturación pendiente del mes vencido, el estado de suscripciones y comisiones (facturadas sobre el total), los servicios de pago único facturados en el período (facturas emitidas con alguna línea cuyo texto coincide con el nombre de un servicio; suma solo esas líneas, `serviciosFacturados` del hook), y la cartera (clientes e ingreso mensual), más la lista de pendientes. Usa `useFacturacionPeriodo` (`src/hooks/`), el mismo hook que Facturación mensual. No muestra nada de Mensajes ni Informes.
 
 ## Facturas (Faktia)
 

@@ -7,6 +7,7 @@ import {
   CalendarCheck,
   CheckCircle2,
   Loader2,
+  Package,
   Users,
   Wallet,
   type LucideIcon,
@@ -69,7 +70,7 @@ const Index = () => {
   const { clients } = useDataStore();
   const periodo = periodoAFacturar();
   const mes = etiquetaPeriodo(periodo);
-  const { suscriptos, brokers, facturas, cargando, error } = useFacturacionPeriodo(periodo);
+  const { suscriptos, brokers, facturas, serviciosFacturados, cargando, error } = useFacturacionPeriodo(periodo);
   const datosFaktia = faktiaConfigurado && !cargando && !error;
 
   // ── Facturación del mes vencido ──────────────────────────────────────────
@@ -157,7 +158,7 @@ const Index = () => {
         {/* Estado del mes */}
         <section className="space-y-3">
           <h2 className="eyebrow">Facturación de {mes}</h2>
-          <div className="grid grid-cols-1 gap-px border border-border bg-border md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-px border border-border bg-border md:grid-cols-2 xl:grid-cols-4">
             <Tile
               to="/invoices/monthly"
               label="Suscripciones"
@@ -178,10 +179,21 @@ const Index = () => {
             </Tile>
             <Tile
               to="/invoices"
+              label="Servicios"
+              icon={Package}
+              value={datosFaktia ? serviciosFacturados.facturas : '—'}
+              caption={datosFaktia ? `Pagos únicos · ${formatoMoneda(serviciosFacturados.neto)}` : 'Sin datos de Faktia'}
+            />
+            <Tile
+              to="/invoices"
               label="Total facturado"
               icon={Wallet}
-              value={datosFaktia ? formatoMoneda(totalFacturadoClientes + totalComisiones).replace(/,\d{2}$/, '') : '—'}
-              caption="Sin IVA, suscripciones + comisiones"
+              value={
+                datosFaktia
+                  ? formatoMoneda(totalFacturadoClientes + totalComisiones + serviciosFacturados.neto).replace(/,\d{2}$/, '')
+                  : '—'
+              }
+              caption="Sin IVA, suscripciones + comisiones + servicios"
             />
           </div>
         </section>

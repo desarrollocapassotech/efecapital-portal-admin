@@ -14,6 +14,11 @@ export const PRIORIDAD: Partial<Record<FaktiaComprobante['estado'], number>> = {
   BORRADOR: 1,
 };
 
+/** Estados de una factura emitida o enviada a ARCA. */
+const RESUELTOS: FaktiaComprobante['estado'][] = ['EMITIDO', 'EMITIENDO', 'PENDIENTE_VERIFICACION'];
+
+const normalizar = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ');
+
 /** Neto de una factura (sin IVA). */
 export const netoDe = (c: FaktiaComprobante) => c.lineas.reduce((acc, l) => acc + (Number(l.importeNeto) || 0), 0);
 
@@ -37,7 +42,7 @@ export const facturasPorReferencia = (comprobantes: FaktiaComprobante[] | undefi
  * y la factura que cada uno ya tiene en Faktia. Lo usan Facturación mensual y el Dashboard (comparten caché).
  */
 export const useFacturacionPeriodo = (periodo: Periodo) => {
-  const { clients, brokers } = useDataStore();
+  const { clients, brokers, servicios } = useDataStore();
 
   const suscriptos = useMemo(() => clients.filter((c) => facturableEn(c.suscripcion, periodo)), [clients, periodo]);
   const referencias = useMemo(
@@ -71,12 +76,30 @@ export const useFacturacionPeriodo = (periodo: Periodo) => {
 
   const facturas = useMemo(() => facturasPorReferencia(periodoQuery.data, refsQuery.data), [periodoQuery.data, refsQuery.data]);
 
+  /**
+   * Servicios de pago único facturados en el período: facturas emitidas (o en curso) con alguna línea
+   * cuya descripción coincide con el nombre de un servicio. Solo suma esas líneas.
+   */
+  const serviciosFacturados = useMemo(() => {
+    const nombres = new Set(servicios.map((s) => normalizar(s.nombre)));
+    const res = { facturas: 0, neto: 0 };
+    for (const c of periodoQuery.data ?? []) {
+      if (!c.tipo.startsWith('FACTURA') || !RESUELTOS.includes(c.estado)) continue;
+      const lineas = c.lineas.filter((l) => nombres.has(normalizar(l.descripcion)));
+      if (lineas.length === 0) continue;
+      res.facturas++;
+      res.neto += lineas.reduce((a, l) => a + (Number(l.importeNeto) || 0), 0);
+    }
+    return res;
+  }, [periodoQuery.data, servicios]);
+
   return {
     suscriptos,
     brokers,
     periodoQuery,
     refsQuery,
     facturas,
+    serviciosFacturados,
     cargando: periodoQuery.isLoading || (referencias.length > 0 && refsQuery.isLoading),
     error: periodoQuery.error ?? refsQuery.error,
   };
