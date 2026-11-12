@@ -25,8 +25,10 @@ import {
   Message,
   Note,
   Notification,
+  Plan,
 } from '@/types';
 import { notificationService } from '@/lib/notifications';
+import { conNuevoMonto, suscripcionDesdeDatos } from '@/lib/suscripciones';
 import {
   DEFAULT_BROKERS,
   brokersFromClientData,
@@ -84,12 +86,19 @@ interface AddDocumentInput {
   file: File;
 }
 
-const collectionKeys = ['clients', 'messages', 'brokers', 'documents'] as const;
+const collectionKeys = ['clients', 'messages', 'brokers', 'documents', 'planes'] as const;
 type CollectionKey = (typeof collectionKeys)[number];
+
+/** Firestore no acepta `undefined`: se quitan esas claves. */
+const sinIndefinidos = <T extends Record<string, unknown>>(obj: T) =>
+  Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as Partial<T>;
+
+export type BrokerInput = Omit<Broker, 'id'>;
 
 interface DataStore {
   clients: Client[];
   brokers: Broker[];
+  planes: Plan[];
   messages: Message[];
   documents: Document[];
   activities: Activity[];
@@ -99,6 +108,19 @@ interface DataStore {
   startDataListeners: () => void;
   stopDataListeners: () => void;
   ensureBrokerExists: (name: string) => Promise<void>;
+
+  addBroker: (broker: BrokerInput) => Promise<void>;
+  /** Si cambia el nombre, se actualiza también en los clientes que lo usan. */
+  updateBroker: (id: string, broker: BrokerInput) => Promise<void>;
+  /** Falla si algún cliente lo tiene asignado. */
+  deleteBroker: (id: string) => Promise<void>;
+
+  addPlan: (plan: Omit<Plan, 'id'>) => Promise<void>;
+  renamePlan: (id: string, nombre: string) => Promise<void>;
+  /** Falla si algún cliente lo tiene asignado. */
+  deletePlan: (id: string) => Promise<void>;
+  /** Cambia el precio del plan y, a los clientes indicados, les aplica el nuevo monto desde el mes en curso. */
+  actualizarPrecioPlan: (planId: string, precio: number, clientIds: string[]) => Promise<void>;
 
   addClient: (client: Omit<Client, 'id' | 'createdAt'>) => Promise<void>;
   updateClient: (id: string, updates: Partial<Client>) => Promise<void>;
@@ -123,6 +145,7 @@ export const useDataStore = create<DataStore>((set, get) => {
   let messagesUnsubscribe: Unsubscribe | null = null;
   let brokersUnsubscribe: Unsubscribe | null = null;
   let documentsUnsubscribe: Unsubscribe | null = null;
+  let planesUnsubscribe: Unsubscribe | null = null;
   const migratedClientIds = new Set<string>();
   let defaultBrokersEnsured = false;
 
@@ -131,6 +154,7 @@ export const useDataStore = create<DataStore>((set, get) => {
     messages: false,
     brokers: false,
     documents: false,
+    planes: false,
   };
 
   const resetLoadingState = () => {
@@ -159,6 +183,7 @@ export const useDataStore = create<DataStore>((set, get) => {
   return {
     clients: [],
     brokers: [],
+    planes: [],
     messages: [],
     documents: [],
     activities: [],
@@ -170,7 +195,8 @@ export const useDataStore = create<DataStore>((set, get) => {
         !clientsUnsubscribe ||
         !messagesUnsubscribe ||
         !brokersUnsubscribe ||
-        !documentsUnsubscribe;
+        !documentsUnsubscribe ||
+        !planesUnsubscribe;
 
       if (shouldResetLoading) {
         resetLoadingState();
@@ -201,6 +227,7 @@ export const useDataStore = create<DataStore>((set, get) => {
               investmentHorizon: data.investmentHorizon ?? '',
               brokers: brokersFromClientData(data),
               fiscal: data.fiscal && typeof data.fiscal === 'object' ? (data.fiscal as Client['fiscal']) : undefined,
+              suscripcion: suscripcionDesdeDatos(data.suscripcion),
               notes: normalizeNotes(data.notes),
               lastContact,
               createdAt,
@@ -277,6 +304,7 @@ export const useDataStore = create<DataStore>((set, get) => {
               email: data.email ?? undefined,
               phone: data.phone ?? undefined,
               notes: data.notes ?? undefined,
+              fiscal: data.fiscal && typeof data.fiscal === 'object' ? (data.fiscal as Broker['fiscal']) : undefined,
             } satisfies Broker;
           });
 
@@ -330,6 +358,28 @@ export const useDataStore = create<DataStore>((set, get) => {
         });
       }
 
+      if (!planesUnsubscribe) {
+        planesUnsubscribe = onSnapshot(
+          query(collection(db, 'planes'), orderBy('precio', 'asc')),
+          (snapshot) => {
+            const planes = snapshot.docs.map((docSnapshot) => {
+              const data = docSnapshot.data();
+              return {
+                id: docSnapshot.id,
+                nombre: data.nombre ?? '',
+                precio: typeof data.precio === 'number' ? data.precio : 0,
+              } satisfies Plan;
+            });
+            set({ planes });
+            markCollectionAsLoaded('planes');
+          },
+          (error) => {
+            console.error('No se pudieron leer los planes', error);
+            markCollectionAsLoaded('planes');
+          }
+        );
+      }
+
     },
 
     stopDataListeners: () => {
@@ -349,10 +399,15 @@ export const useDataStore = create<DataStore>((set, get) => {
         documentsUnsubscribe();
         documentsUnsubscribe = null;
       }
+      if (planesUnsubscribe) {
+        planesUnsubscribe();
+        planesUnsubscribe = null;
+      }
 
       set({
         clients: [],
         brokers: [],
+        planes: [],
         messages: [],
         documents: [],
         activities: [],
@@ -387,6 +442,83 @@ export const useDataStore = create<DataStore>((set, get) => {
       });
     },
 
+    addBroker: async (broker) => {
+      const name = canonicalBrokerName(broker.name, get().brokers.map((b) => b.name));
+      if (!name) throw new Error('El nombre es obligatorio');
+      if (get().brokers.some((b) => sameBroker(b.name, name))) {
+        throw new Error('Ya existe un broker con ese nombre');
+      }
+      await addDoc(collection(db, 'brokers'), sinIndefinidos({ ...broker, name }));
+    },
+
+    updateBroker: async (id, broker) => {
+      const actual = get().brokers.find((b) => b.id === id);
+      if (!actual) throw new Error('El broker ya no existe');
+      const name = broker.name.trim().replace(/\s+/g, ' ');
+      if (!name) throw new Error('El nombre es obligatorio');
+      if (get().brokers.some((b) => b.id !== id && sameBroker(b.name, name))) {
+        throw new Error('Ya existe un broker con ese nombre');
+      }
+
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'brokers', id), {
+        name,
+        email: broker.email ?? null,
+        phone: broker.phone ?? null,
+        notes: broker.notes ?? null,
+        fiscal: broker.fiscal ?? null,
+      });
+      // Los clientes guardan el nombre del broker: si cambió, se reemplaza en cada uno
+      if (name !== actual.name) {
+        get()
+          .clients.filter((c) => c.brokers.some((b) => sameBroker(b, actual.name)))
+          .forEach((c) => {
+            const brokers = normalizeBrokerList(c.brokers.map((b) => (sameBroker(b, actual.name) ? name : b)));
+            batch.update(doc(db, 'clients', c.id), { brokers, broker: formatBrokers(brokers) });
+          });
+      }
+      await batch.commit();
+    },
+
+    deleteBroker: async (id) => {
+      const broker = get().brokers.find((b) => b.id === id);
+      if (!broker) return;
+      const enUso = get().clients.filter((c) => c.brokers.some((b) => sameBroker(b, broker.name))).length;
+      if (enUso > 0) {
+        throw new Error(`Lo ${enUso === 1 ? 'usa 1 cliente' : `usan ${enUso} clientes`}: quitalo de sus fichas antes de eliminarlo`);
+      }
+      await deleteDoc(doc(db, 'brokers', id));
+    },
+
+    addPlan: async ({ nombre, precio }) => {
+      await addDoc(collection(db, 'planes'), { nombre: nombre.trim(), precio });
+    },
+
+    renamePlan: async (id, nombre) => {
+      await updateDoc(doc(db, 'planes', id), { nombre: nombre.trim() });
+    },
+
+    deletePlan: async (id) => {
+      const enUso = get().clients.filter((c) => c.suscripcion?.planId === id).length;
+      if (enUso > 0) {
+        throw new Error(`Lo ${enUso === 1 ? 'tiene 1 cliente' : `tienen ${enUso} clientes`}: cambiales el plan antes de eliminarlo`);
+      }
+      await deleteDoc(doc(db, 'planes', id));
+    },
+
+    actualizarPrecioPlan: async (planId, precio, clientIds) => {
+      const batch = writeBatch(db);
+      batch.update(doc(db, 'planes', planId), { precio });
+      get()
+        .clients.filter((c) => clientIds.includes(c.id) && c.suscripcion)
+        .forEach((c) => {
+          batch.update(doc(db, 'clients', c.id), {
+            'suscripcion.historial': conNuevoMonto(c.suscripcion!.historial, precio),
+          });
+        });
+      await batch.commit();
+    },
+
     addClient: async (clientData) => {
       const brokers = normalizeBrokerList(clientData.brokers, get().brokers.map((b) => b.name));
       await Promise.all(brokers.map((name) => get().ensureBrokerExists(name)));
@@ -404,6 +536,7 @@ export const useDataStore = create<DataStore>((set, get) => {
         brokers,
         broker: formatBrokers(brokers), // compatibilidad con el portal de clientes
         ...(clientData.fiscal ? { fiscal: clientData.fiscal } : {}),
+        ...(clientData.suscripcion ? { suscripcion: clientData.suscripcion } : {}),
         notes,
         lastContact: clientData.lastContact
           ? Timestamp.fromDate(new Date(clientData.lastContact))
@@ -444,6 +577,7 @@ export const useDataStore = create<DataStore>((set, get) => {
       }
       if (Array.isArray(updates.notes)) payload.notes = updates.notes;
       if ('fiscal' in updates) payload.fiscal = updates.fiscal ?? null;
+      if ('suscripcion' in updates) payload.suscripcion = updates.suscripcion ?? null;
       if (updates.lastContact) {
         payload.lastContact = Timestamp.fromDate(new Date(updates.lastContact));
       }

@@ -9,7 +9,7 @@
  * muestra que la integración no está configurada.
  */
 import { auth } from '@/lib/firebase';
-import type { Client } from '@/types';
+import type { Broker, Client, DatosFiscales } from '@/types';
 
 export const FAKTIA_API_URL = (import.meta.env.VITE_FAKTIA_API_URL as string | undefined)?.replace(/\/+$/, '') ?? '';
 export const faktiaConfigurado = Boolean(FAKTIA_API_URL);
@@ -227,10 +227,38 @@ const json = async <T>(ruta: string, init?: RequestInit & { idempotencia?: strin
 
 const claveIdempotencia = () => crypto.randomUUID();
 
+/** A quién se le factura: cliente o broker de EFE Capital, con su referencia en Faktia. */
+export interface Receptor {
+  /** referenciaExterna en Faktia: id del cliente, o `broker:<id>` para brokers */
+  referencia: string;
+  nombre: string;
+  email?: string;
+  fiscal?: DatosFiscales;
+}
+
+export const referenciaBroker = (brokerId: string) => `broker:${brokerId}`;
+
+export const receptorDeCliente = (c: Client): Receptor => ({
+  referencia: c.id,
+  nombre: `${c.firstName} ${c.lastName}`.trim(),
+  email: c.email,
+  fiscal: c.fiscal,
+});
+
+export const receptorDeBroker = (b: Broker): Receptor => ({
+  referencia: referenciaBroker(b.id),
+  nombre: b.name,
+  email: b.email,
+  fiscal: b.fiscal,
+});
+
 export const faktia = {
   configuracion: () => json<FaktiaConfiguracion>('/configuracion'),
 
-  listarComprobantes: (params: { estado?: EstadoComprobante; clienteId?: string; pagina?: number; porPagina?: number } = {}) => {
+  /** `periodo` (YYYY-MM): comprobantes cuyo período de servicio abarca ese mes. */
+  listarComprobantes: (
+    params: { estado?: EstadoComprobante; clienteId?: string; periodo?: string; pagina?: number; porPagina?: number } = {},
+  ) => {
     const q = new URLSearchParams();
     Object.entries(params).forEach(([k, v]) => v !== undefined && v !== '' && q.set(k, String(v)));
     return json<{ total: number; pagina: number; porPagina: number; items: FaktiaComprobante[] }>(`/comprobantes?${q}`);
@@ -247,14 +275,28 @@ export const faktia = {
     return items;
   },
 
-  crearBorrador: (datos: CrearBorradorInput) =>
-    json<FaktiaComprobante>('/comprobantes', { method: 'POST', body: JSON.stringify(datos), idempotencia: claveIdempotencia() }),
+  /** Todos los comprobantes de un período de servicio (YYYY-MM). */
+  async comprobantesDelPeriodo(periodo: string): Promise<FaktiaComprobante[]> {
+    const items: FaktiaComprobante[] = [];
+    for (let pagina = 1; ; pagina++) {
+      const r = await faktia.listarComprobantes({ periodo, pagina, porPagina: 100 });
+      items.push(...r.items);
+      if (items.length >= r.total || r.items.length === 0) return items;
+    }
+  },
 
-  emitir: (id: string, version?: number) =>
+  /**
+   * `idempotencia`: clave fija para operaciones que se pueden repetir (ej. facturación mensual: reintentar
+   * no duplica). Faktia la recuerda 24 h; por defecto se usa una clave nueva.
+   */
+  crearBorrador: (datos: CrearBorradorInput, idempotencia: string = claveIdempotencia()) =>
+    json<FaktiaComprobante>('/comprobantes', { method: 'POST', body: JSON.stringify(datos), idempotencia }),
+
+  emitir: (id: string, version?: number, idempotencia: string = claveIdempotencia()) =>
     json<FaktiaComprobante>(`/comprobantes/${id}/emitir`, {
       method: 'POST',
       body: JSON.stringify(version === undefined ? {} : { version }),
-      idempotencia: claveIdempotencia(),
+      idempotencia,
     }),
 
   /** Borrador de nota de crédito/débito sobre una factura emitida (mismas líneas). */
@@ -311,26 +353,30 @@ export const faktia = {
     return json<Array<{ referenciaExterna: string; cliente: FaktiaCliente }>>(`/clientes/referencias?${q}`);
   },
 
+  /** Cliente de Faktia asociado a un cliente de EFE Capital (referencia = id de Firestore). */
+  asegurarCliente: (cliente: Client): Promise<FaktiaCliente> =>
+    faktia.asegurarReceptor(receptorDeCliente(cliente)),
+
   /**
-   * Devuelve el cliente de Faktia asociado a un cliente de EFE Capital (por su id de Firestore).
+   * Devuelve el cliente de Faktia asociado a una referencia (cliente o broker de EFE Capital).
    * Si no existe lo crea con los datos fiscales; si ya existe con ese documento, lo asocia.
    */
-  async asegurarCliente(cliente: Client): Promise<FaktiaCliente> {
-    const [vinculado] = await faktia.clientesPorReferencia([cliente.id]);
+  async asegurarReceptor(receptor: Receptor): Promise<FaktiaCliente> {
+    const [vinculado] = await faktia.clientesPorReferencia([receptor.referencia]);
     if (vinculado) return vinculado.cliente;
 
-    const fiscal = cliente.fiscal;
+    const fiscal = receptor.fiscal;
     if (!fiscal?.numeroDocumento || !fiscal.tipoDocumento || !fiscal.condicionIva) {
-      throw new FaktiaError('El cliente no tiene cargados sus datos fiscales (documento y condición de IVA).', 400);
+      throw new FaktiaError(`${receptor.nombre} no tiene cargados sus datos fiscales (documento y condición de IVA).`, 400);
     }
     const datos = {
-      razonSocial: fiscal.razonSocial?.trim() || `${cliente.firstName} ${cliente.lastName}`.trim(),
+      razonSocial: fiscal.razonSocial?.trim() || receptor.nombre,
       tipoDocumento: fiscal.tipoDocumento,
       numeroDocumento: fiscal.numeroDocumento.replace(/\D/g, ''),
       condicionIva: fiscal.condicionIva,
       domicilio: fiscal.domicilio?.trim() || undefined,
-      email: cliente.email || undefined,
-      referenciaExterna: cliente.id,
+      email: receptor.email || undefined,
+      referenciaExterna: receptor.referencia,
     };
     try {
       return await json<FaktiaCliente>('/clientes', { method: 'POST', body: JSON.stringify(datos), idempotencia: claveIdempotencia() });
@@ -342,7 +388,7 @@ export const faktia = {
         if (existente) {
           const r = await json<{ cliente: FaktiaCliente }>(`/clientes/${existente.id}/referencias`, {
             method: 'POST',
-            body: JSON.stringify({ referenciaExterna: cliente.id }),
+            body: JSON.stringify({ referenciaExterna: receptor.referencia }),
           });
           return r.cliente;
         }

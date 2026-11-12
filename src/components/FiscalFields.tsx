@@ -65,10 +65,12 @@ export const FiscalFields = ({
   value,
   onChange,
   error,
+  placeholderRazonSocial = 'Si se deja vacío, nombre y apellido',
 }: {
   value: FiscalDraft;
   onChange: (next: FiscalDraft) => void;
   error?: string;
+  placeholderRazonSocial?: string;
 }) => {
   const [consultando, setConsultando] = useState(false);
   const set = <K extends keyof FiscalDraft>(k: K, v: FiscalDraft[K]) => onChange({ ...value, [k]: v });
@@ -160,7 +162,7 @@ export const FiscalFields = ({
             id="razonSocial"
             value={value.razonSocial}
             onChange={(e) => set('razonSocial', e.target.value)}
-            placeholder="Si se deja vacío, nombre y apellido"
+            placeholder={placeholderRazonSocial}
           />
         </div>
         <div>

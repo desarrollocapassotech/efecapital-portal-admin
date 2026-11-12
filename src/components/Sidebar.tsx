@@ -9,6 +9,9 @@ import {
   PanelLeftOpen,
   FlaskConical,
   Receipt,
+  Building2,
+  Layers,
+  CalendarCheck,
 } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { usePreviewStore } from '@/stores/previewStore';
@@ -20,6 +23,9 @@ import { useState, useEffect, useRef } from 'react';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard, preview: true },
   { name: 'Clientes', href: '/clients', icon: Users },
+  { name: 'Brokers', href: '/brokers', icon: Building2 },
+  { name: 'Planes', href: '/plans', icon: Layers },
+  { name: 'Facturación mensual', href: '/billing', icon: CalendarCheck },
   { name: 'Facturas', href: '/invoices', icon: Receipt },
   { name: 'Mensajes', href: '/messages', icon: MessageCircle, preview: true },
   { name: 'Informes', href: '/reports', icon: FileText, preview: true },

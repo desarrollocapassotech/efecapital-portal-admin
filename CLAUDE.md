@@ -14,7 +14,24 @@ Las facturas se emiten con **Faktia** (proyecto en `../../FAKTIA`, API pública 
 - Cliente EFE ↔ cliente Faktia: se asocian por `referenciaExterna` = id del cliente en Firestore (`faktia.asegurarCliente`). Para facturar, el cliente necesita `fiscal` (documento + condición IVA), que se carga en el formulario de cliente.
 - Pantallas: `/invoices` (listado, emitir borradores, PDF) y `/invoices/new`. La futura **cuenta corriente** (pagos/saldos) va aparte y se apoya en estos comprobantes.
 
+## Facturación mensual (suscripciones y comisiones)
+
+Pantalla `/billing` (`src/pages/Billing.tsx`): en un solo paso emite las facturas del mes a clientes (suscripción) y brokers (comisiones).
+- **Mes vencido**: por defecto factura el mes anterior. Cada factura: concepto Servicios, período = mes completo, emisión hoy, vencimiento a `DIAS_VENCIMIENTO` días.
+- **Detección de duplicados**: consulta Faktia con `GET /comprobantes?periodo=YYYY-MM` (filtro por superposición del período de servicio) y marca como facturado al receptor que ya tiene una factura emitida o en curso. Las anuladas no cuentan. Los borradores y las rechazadas del período se reutilizan, no se crea otra factura. La idempotencia de Faktia dura solo 24 h: no alcanza para esto.
+- Confirmación previa con `AlertDialog`, emisión secuencial con estado por fila; los errores quedan marcados para reintentar.
+- Brokers: el usuario carga el total del mes de cada uno; se muestra lo facturado el mes anterior como referencia (clic para copiarlo). Una factura por broker con una línea "Comisiones — Mes Año".
+
+Suscripción del cliente (`client.suscripcion`, lógica en `src/lib/suscripciones.ts`, se edita en `ClientForm` con `SuscripcionFields`):
+- `desde` = mes de alta (se cobra completo), `hasta` = último mes facturado (baja), `planId` opcional.
+- `historial` de montos con vigencia `desde`. **Cada cliente tiene su propio monto** (los viejos pueden quedar atrasados respecto del plan). Un cambio rige desde el mes en curso, así la factura del mes anterior sale con el monto viejo. La opción "Es una corrección" reemplaza todo el historial.
+- Planes (`planes` en Firestore: `nombre`, `precio`) en `/plans`. "Actualizar precio" cambia el precio del plan y lo aplica solo a los clientes tildados: por defecto, los que pagaban el precio vigente; los atrasados quedan como están.
+
+Receptores en Faktia: clientes con `referenciaExterna` = id del cliente; brokers con `broker:<id>` (`faktia.asegurarReceptor`).
+
 ## Brokers
+
+ABM en `/brokers` (`Brokers.tsx`, `BrokerForm.tsx`, `BrokerDetailSheet.tsx`). El broker tiene datos fiscales (`fiscal`) para facturarle. Si se renombra, el nombre se reemplaza también en los clientes que lo usan (batch). No se puede eliminar si algún cliente lo tiene asignado.
 
 Un cliente puede tener varios brokers. Lógica en `src/lib/brokers.ts`.
 

@@ -8,7 +8,9 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmailLink, WhatsAppLink } from '@/components/ContactLinks';
-import { CONDICIONES_IVA } from '@/lib/faktia';
+import { CONDICIONES_IVA, formatoMoneda } from '@/lib/faktia';
+import { estaAtrasado, etiquetaPeriodo, montoActual } from '@/lib/suscripciones';
+import { useDataStore } from '@/stores/dataStore';
 
 const Seccion = ({ titulo, children }: { titulo: string; children: ReactNode }) => (
   <section className="space-y-3 border-t border-border pt-5">
@@ -52,6 +54,7 @@ export const ClientDetailSheet = ({
   client: Client | null;
   onOpenChange: (open: boolean) => void;
 }) => {
+  const planes = useDataStore((s) => s.planes);
   const notas = c?.notes
     ? [...c.notes].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     : [];
@@ -118,6 +121,26 @@ export const ClientDetailSheet = ({
                     Completarlos
                   </Link>
                 </p>
+              )}
+            </Seccion>
+
+            <Seccion titulo="Suscripción">
+              {c.suscripcion ? (
+                <dl className="space-y-2">
+                  <Dato label="Plan">{planes.find((p) => p.id === c.suscripcion!.planId)?.nombre ?? 'Sin plan'}</Dato>
+                  <Dato label="Monto mensual">
+                    <span className="tabular-nums">{formatoMoneda(montoActual(c.suscripcion) ?? 0)}</span>
+                    {estaAtrasado(c.suscripcion, planes) && (
+                      <span className="ml-2 border border-gold/30 bg-gold/10 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wider text-gold">
+                        Atrasado
+                      </span>
+                    )}
+                  </Dato>
+                  <Dato label="Desde">{etiquetaPeriodo(c.suscripcion.desde)}</Dato>
+                  {c.suscripcion.hasta && <Dato label="Baja">Último mes: {etiquetaPeriodo(c.suscripcion.hasta)}</Dato>}
+                </dl>
+              ) : (
+                <p className="text-sm text-muted-foreground">No tiene suscripción mensual.</p>
               )}
             </Seccion>
 

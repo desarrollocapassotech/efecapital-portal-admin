@@ -290,7 +290,7 @@ export const Invoices = () => {
     <div className="flex-1 space-y-4 p-3 pt-16 sm:space-y-6 sm:p-6 lg:pt-6">
       <PageHeader
         breadcrumbs={[{ label: 'Facturas' }]}
-        title="Facturas"
+        title="Gestión de Facturas"
         actions={
           <>
             {FAKTIA_APP_URL && (

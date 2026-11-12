@@ -7,6 +7,13 @@ import {
   validarFiscal,
   type FiscalDraft,
 } from '@/components/FiscalFields';
+import {
+  SuscripcionFields,
+  suscripcionDraftFrom,
+  suscripcionFromDraft,
+  validarSuscripcion,
+  type SuscripcionDraft,
+} from '@/components/SuscripcionFields';
 import { buildBrokerOptions } from '@/lib/brokers';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { PageHeader } from '@/components/PageHeader';
@@ -244,7 +251,7 @@ const RichTextEditor = ({
 export const ClientForm = () => {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const { clients, addClient, updateClient, brokers } = useDataStore();
+  const { clients, addClient, updateClient, brokers, planes } = useDataStore();
   const { toast } = useToast();
 
   const isEditing = id && id !== 'new';
@@ -272,6 +279,9 @@ export const ClientForm = () => {
 
   const [fiscalDraft, setFiscalDraft] = useState<FiscalDraft>(fiscalDraftFrom(existingClient?.fiscal));
   const [fiscalError, setFiscalError] = useState('');
+
+  const [suscripcionDraft, setSuscripcionDraft] = useState<SuscripcionDraft>(suscripcionDraftFrom(existingClient?.suscripcion));
+  const [suscripcionError, setSuscripcionError] = useState('');
 
   const handleBrokersChange = (next: string[]) => {
     setSelectedBrokers(next);
@@ -374,7 +384,10 @@ export const ClientForm = () => {
     const fiscalMessage = validarFiscal(fiscalDraft);
     setFiscalError(fiscalMessage);
 
-    return Object.keys(newErrors).length === 0 && !brokersMessage && !fiscalMessage;
+    const suscripcionMessage = validarSuscripcion(suscripcionDraft);
+    setSuscripcionError(suscripcionMessage);
+
+    return Object.keys(newErrors).length === 0 && !brokersMessage && !fiscalMessage && !suscripcionMessage;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -410,6 +423,7 @@ export const ClientForm = () => {
         investmentHorizon: formData.investmentHorizon,
         brokers: selectedBrokers,
         fiscal: fiscalFromDraft(fiscalDraft),
+        suscripcion: suscripcionFromDraft(suscripcionDraft, existingClient?.suscripcion),
       };
 
       if (isEditing) {
@@ -610,6 +624,24 @@ export const ClientForm = () => {
                 if (fiscalError) setFiscalError(validarFiscal(next));
               }}
               error={fiscalError}
+            />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Suscripción</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <SuscripcionFields
+              value={suscripcionDraft}
+              onChange={(next) => {
+                setSuscripcionDraft(next);
+                if (suscripcionError) setSuscripcionError(validarSuscripcion(next));
+              }}
+              planes={planes}
+              existente={existingClient?.suscripcion}
+              error={suscripcionError}
             />
           </CardContent>
         </Card>

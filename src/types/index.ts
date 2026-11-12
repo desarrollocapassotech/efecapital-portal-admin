@@ -11,10 +11,42 @@ export interface Client {
   brokers: string[];
   /** Datos fiscales para facturar con Faktia (opcionales hasta la primera factura) */
   fiscal?: ClientFiscal;
+  /** Suscripción mensual que se le factura (mes vencido). Ver src/lib/suscripciones.ts */
+  suscripcion?: Suscripcion;
   notes?: Note[];
   lastContact: Date;
   createdAt: Date;
 }
+
+/** Período mensual "YYYY-MM". */
+export type Periodo = string;
+
+export interface MontoVigente {
+  monto: number;
+  /** Primer mes en que rige este monto */
+  desde: Periodo;
+}
+
+export interface Suscripcion {
+  /** Plan al que pertenece (sirve para actualizar precios en bloque). Opcional: puede tener un monto propio. */
+  planId?: string | null;
+  /** Primer mes que se factura (mes de alta, se cobra completo) */
+  desde: Periodo;
+  /** Último mes que se factura (baja). Sin valor, sigue activa. */
+  hasta?: Periodo | null;
+  /** Montos con su vigencia, ordenados por `desde`. El monto de un mes es el último que ya regía. */
+  historial: MontoVigente[];
+}
+
+export interface Plan {
+  id: string;
+  nombre: string;
+  /** Precio vigente del plan (lo que pagan los clientes al día) */
+  precio: number;
+}
+
+/** Datos fiscales de un receptor de factura (cliente o broker). */
+export type DatosFiscales = ClientFiscal;
 
 export interface ClientFiscal {
   tipoDocumento: 'CUIT' | 'CUIL' | 'DNI' | 'PASAPORTE';
@@ -31,6 +63,8 @@ export interface Broker {
   email?: string;
   phone?: string;
   notes?: string;
+  /** Datos fiscales para facturarle las comisiones */
+  fiscal?: DatosFiscales;
 }
 
 export interface Note {
