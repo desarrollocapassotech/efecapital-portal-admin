@@ -40,7 +40,6 @@ import {
 } from '@/lib/faktia';
 import {
   etiquetaPeriodo,
-  facturableEn,
   montoADecimal,
   montoAInput,
   montoEn,
@@ -50,6 +49,7 @@ import {
   sumarMeses,
 } from '@/lib/suscripciones';
 import { INVOICES_QUERY_KEY } from '@/pages/Invoices';
+import { facturasPorReferencia, netoDe, useFacturacionPeriodo } from '@/hooks/useFacturacionPeriodo';
 
 /** Días entre la emisión y el vencimiento de pago de cada factura. */
 const DIAS_VENCIMIENTO = 10;
@@ -102,15 +102,6 @@ interface Fila {
   editarUrl: string;
 }
 
-/** La factura más relevante de un receptor en el período (las anuladas no cuentan: se puede volver a facturar). */
-const PRIORIDAD: Partial<Record<FaktiaComprobante['estado'], number>> = {
-  EMITIDO: 4,
-  PENDIENTE_VERIFICACION: 3,
-  EMITIENDO: 3,
-  RECHAZADO: 2,
-  BORRADOR: 1,
-};
-
 const estadoBase = (f: Fila): Estado => {
   const c = f.comprobante;
   if (c?.estado === 'EMITIDO') return 'facturada';
@@ -121,13 +112,10 @@ const estadoBase = (f: Fila): Estado => {
   return 'pendiente';
 };
 
-/** Neto de una factura (sin IVA), para mostrar lo facturado el mes anterior. */
-const netoDe = (c: FaktiaComprobante) => c.lineas.reduce((acc, l) => acc + (Number(l.importeNeto) || 0), 0);
-
 export const Billing = () => {
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
-  const { clients, brokers, planes } = useDataStore();
+  const { brokers, planes } = useDataStore();
 
   const ultimoFacturable = periodoAFacturar();
   const [periodo, setPeriodo] = useState(ultimoFacturable);
@@ -146,13 +134,9 @@ export const Billing = () => {
   const [puntoVentaId, setPuntoVentaId] = useState('');
   const puntoVenta = puntoVentaId || config?.puntosVenta[0]?.id || '';
 
-  const periodoQuery = useQuery({
-    queryKey: ['faktia', 'periodo', periodo],
-    queryFn: () => faktia.comprobantesDelPeriodo(periodo),
-    enabled: faktiaConfigurado,
-    staleTime: 30_000,
-    retry: reintentarFaktia,
-  });
+  const { suscriptos, periodoQuery, refsQuery, facturas: facturasDelPeriodo, cargando, error: errorCarga } =
+    useFacturacionPeriodo(periodo);
+  // Mes anterior: referencia de lo facturado a cada broker
   const anteriorQuery = useQuery({
     queryKey: ['faktia', 'periodo', sumarMeses(periodo, -1)],
     queryFn: () => faktia.comprobantesDelPeriodo(sumarMeses(periodo, -1)),
@@ -160,46 +144,10 @@ export const Billing = () => {
     staleTime: 5 * 60_000,
     retry: reintentarFaktia,
   });
-
-  const suscriptos = useMemo(() => clients.filter((c) => facturableEn(c.suscripcion, periodo)), [clients, periodo]);
-  const referencias = useMemo(
-    () => [...suscriptos.map((c) => c.id), ...brokers.map((b) => referenciaBroker(b.id))].sort(),
-    [suscriptos, brokers]
+  const facturasAnteriores = useMemo(
+    () => facturasPorReferencia(anteriorQuery.data, refsQuery.data),
+    [anteriorQuery.data, refsQuery.data]
   );
-
-  /** faktiaClienteId → referencia (id de cliente o broker:<id>) */
-  const refsQuery = useQuery({
-    queryKey: ['faktia', 'referencias', referencias.join(',')],
-    queryFn: async () => {
-      const mapa = new Map<string, string>();
-      for (let i = 0; i < referencias.length; i += 200) {
-        const r = await faktia.clientesPorReferencia(referencias.slice(i, i + 200));
-        r.forEach((v) => mapa.set(v.cliente.id, v.referenciaExterna));
-      }
-      return mapa;
-    },
-    enabled: faktiaConfigurado && referencias.length > 0,
-    staleTime: 5 * 60_000,
-    retry: reintentarFaktia,
-  });
-
-  /** Facturas de un período agrupadas por referencia, quedándose con la más relevante. */
-  const porReferencia = (comprobantes: FaktiaComprobante[] | undefined) => {
-    const mapa = new Map<string, FaktiaComprobante>();
-    const refs = refsQuery.data;
-    if (!comprobantes || !refs) return mapa;
-    for (const c of comprobantes) {
-      if (!c.tipo.startsWith('FACTURA')) continue;
-      const ref = refs.get(c.cliente.id);
-      const prioridad = PRIORIDAD[c.estado];
-      if (!ref || !prioridad) continue;
-      const actual = mapa.get(ref);
-      if (!actual || prioridad > (PRIORIDAD[actual.estado] ?? 0)) mapa.set(ref, c);
-    }
-    return mapa;
-  };
-  const facturasDelPeriodo = useMemo(() => porReferencia(periodoQuery.data), [periodoQuery.data, refsQuery.data]); // eslint-disable-line react-hooks/exhaustive-deps
-  const facturasAnteriores = useMemo(() => porReferencia(anteriorQuery.data), [anteriorQuery.data, refsQuery.data]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Filas ────────────────────────────────────────────────────────────────
 
@@ -368,7 +316,7 @@ export const Billing = () => {
 
   const header = (
     <PageHeader
-      breadcrumbs={[{ label: 'Facturación mensual' }]}
+      breadcrumbs={[{ label: 'Facturas', to: '/invoices' }, { label: 'Facturación mensual' }]}
       title="Facturación mensual"
       description={
         config
@@ -397,8 +345,6 @@ export const Billing = () => {
     );
   }
 
-  const cargando = periodoQuery.isLoading || (referencias.length > 0 && refsQuery.isLoading);
-  const errorCarga = periodoQuery.error ?? refsQuery.error;
 
   const acciones = (f: Fila) => (
     <div className="flex items-center justify-end gap-2">

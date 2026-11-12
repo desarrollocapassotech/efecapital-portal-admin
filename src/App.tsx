@@ -69,8 +69,8 @@ const App = () => {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/" element={<Layout />}>
-              {/* Dashboard: solo con "En desarrollo" activo; si no, el inicio es Clientes */}
-              <Route index element={<PreviewRoute><Index /></PreviewRoute>} />
+              {/* Dashboard: pantalla de inicio (estado de la facturación del mes) */}
+              <Route index element={<Index />} />
               <Route path="clients" element={<Clients />} />
               <Route path="clients/:id" element={<ClientDetail />} />
               <Route path="clients/:id/edit" element={<ClientForm />} />
@@ -79,9 +79,10 @@ const App = () => {
               <Route path="brokers/new" element={<BrokerForm />} />
               <Route path="brokers/:id/edit" element={<BrokerForm />} />
               <Route path="plans" element={<Plans />} />
-              <Route path="billing" element={<Billing />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="invoices/new" element={<InvoiceForm />} />
+              <Route path="invoices/monthly" element={<Billing />} />
+              <Route path="billing" element={<Navigate to="/invoices/monthly" replace />} />
               <Route path="messages" element={<PreviewRoute><Messages /></PreviewRoute>} />
               <Route path="messages/:id" element={<PreviewRoute><ClientChat /></PreviewRoute>} />
               <Route path="reports" element={<PreviewRoute><Reports /></PreviewRoute>} />

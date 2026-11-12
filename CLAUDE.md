@@ -4,7 +4,7 @@ React + Vite + TypeScript + Tailwind + shadcn/ui. Firebase para auth y datos (`s
 
 ## Navegación
 
-La pantalla de inicio es **Clientes**: `/` redirige a `/clients`. El Dashboard (`src/pages/Index.tsx`) se considera redundante y es un módulo más "en desarrollo": solo aparece (ruta `/` + ítem del menú) con el switch activo.
+La pantalla de inicio es el **Dashboard** (`/`, `src/pages/Index.tsx`): un resumen completo con el recordatorio de facturación pendiente del mes vencido, el estado de suscripciones y comisiones (facturadas sobre el total), y la cartera (clientes e ingreso mensual), más la lista de pendientes. Usa `useFacturacionPeriodo` (`src/hooks/`), el mismo hook que Facturación mensual. No muestra nada de Mensajes ni Informes.
 
 ## Facturas (Faktia)
 
@@ -16,7 +16,7 @@ Las facturas se emiten con **Faktia** (proyecto en `../../FAKTIA`, API pública 
 
 ## Facturación mensual (suscripciones y comisiones)
 
-Pantalla `/billing` (`src/pages/Billing.tsx`): en un solo paso emite las facturas del mes a clientes (suscripción) y brokers (comisiones).
+Pantalla `/invoices/monthly` (`src/pages/Billing.tsx`), subpantalla de Facturas (botón en su encabezado, sin ítem propio en el menú; `/billing` redirige): en un solo paso emite las facturas del mes a clientes (suscripción) y brokers (comisiones).
 - **Mes vencido**: por defecto factura el mes anterior. Cada factura: concepto Servicios, período = mes completo, emisión hoy, vencimiento a `DIAS_VENCIMIENTO` días.
 - **Detección de duplicados**: consulta Faktia con `GET /comprobantes?periodo=YYYY-MM` (filtro por superposición del período de servicio) y marca como facturado al receptor que ya tiene una factura emitida o en curso. Las anuladas no cuentan. Los borradores y las rechazadas del período se reutilizan, no se crea otra factura. La idempotencia de Faktia dura solo 24 h: no alcanza para esto.
 - Confirmación previa con `AlertDialog`, emisión secuencial con estado por fila; los errores quedan marcados para reintentar.
@@ -44,7 +44,7 @@ Un cliente puede tener varios brokers. Lógica en `src/lib/brokers.ts`.
 
 El foco actual es el **facturador**. **Mensajes** e **Informes** todavía no se usan: están ocultos por defecto detrás de `usePreviewStore` / `useShowPreviewModules` (`src/stores/previewStore.ts`, guardado en localStorage). El usuario los puede mostrar con el switch "En desarrollo" del menú lateral, y ahí aparecen con la etiqueta "Beta".
 
-Lo que respeta ese flag: ítems del menú (`preview: true` en `Sidebar.tsx`), ícono de mensajes de la barra móvil, tarjetas del Dashboard, botones "Chat" en Clientes y Detalle de cliente, rutas `/`, `/messages*` y `/reports*` (`PreviewRoute` en `App.tsx`, redirige a `/clients`) y notificaciones push de mensajes. Cualquier entrada nueva a estos módulos tiene que pasar por el mismo flag.
+Lo que respeta ese flag: ítems del menú (`preview: true` en `Sidebar.tsx`), ícono de mensajes de la barra móvil, botones "Chat" en Clientes y Detalle de cliente, rutas `/messages*` y `/reports*` (`PreviewRoute` en `App.tsx`, redirige a `/clients`) y notificaciones push de mensajes. Cualquier entrada nueva a estos módulos tiene que pasar por el mismo flag.
 
 ## Estilo visual
 

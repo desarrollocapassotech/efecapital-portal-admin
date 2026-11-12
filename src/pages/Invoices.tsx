@@ -7,6 +7,7 @@ import {
   ArrowUp,
   ArrowUpDown,
   Ban,
+  CalendarCheck,
   ExternalLink,
   Eye,
   FileMinus,
@@ -307,6 +308,12 @@ export const Invoices = () => {
                 Actualizar
               </Button>
             )}
+            <Button variant="outline" asChild className="w-full sm:w-auto">
+              <Link to="/invoices/monthly">
+                <CalendarCheck className="h-4 w-4" />
+                Facturación mensual
+              </Link>
+            </Button>
             <Button asChild className="w-full sm:w-auto" disabled={!faktiaConfigurado}>
               <Link to="/invoices/new">
                 <Plus className="h-4 w-4" />

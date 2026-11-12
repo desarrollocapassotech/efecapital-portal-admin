@@ -11,7 +11,6 @@ import {
   Receipt,
   Building2,
   Layers,
-  CalendarCheck,
 } from 'lucide-react';
 import { useDataStore } from '@/stores/dataStore';
 import { usePreviewStore } from '@/stores/previewStore';
@@ -21,11 +20,10 @@ import { useState, useEffect, useRef } from 'react';
 
 // `preview: true` = módulo en desarrollo, oculto salvo que el usuario active "Módulos en desarrollo"
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: LayoutDashboard, preview: true },
+  { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Clientes', href: '/clients', icon: Users },
   { name: 'Brokers', href: '/brokers', icon: Building2 },
   { name: 'Planes', href: '/plans', icon: Layers },
-  { name: 'Facturación mensual', href: '/billing', icon: CalendarCheck },
   { name: 'Facturas', href: '/invoices', icon: Receipt },
   { name: 'Mensajes', href: '/messages', icon: MessageCircle, preview: true },
   { name: 'Informes', href: '/reports', icon: FileText, preview: true },
@@ -147,7 +145,7 @@ export const Sidebar = () => {
             <Menu className="h-5 w-5" />
           </button>
 
-          <Link to="/clients" onClick={() => setIsSidebarOpen(false)}>
+          <Link to="/" onClick={() => setIsSidebarOpen(false)}>
             <BrandLockup compact />
           </Link>
 
@@ -187,7 +185,7 @@ export const Sidebar = () => {
         <div className="flex h-full flex-col">
           {/* Marca (solo desktop) */}
           <div className="hidden lg:block">
-            <Link to="/clients" className={`block py-6 ${collapsed ? 'px-3' : 'px-6'}`} title="EFE Capital">
+            <Link to="/" className={`block py-6 ${collapsed ? 'px-3' : 'px-6'}`} title="EFE Capital">
               <BrandLockup iconOnly={collapsed} />
             </Link>
             <div className="brand-bar h-[2px]" />
