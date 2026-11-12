@@ -27,7 +27,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useShowPreviewModules } from '@/stores/previewStore';
-import { CopyableText } from '@/components/CopyButton';
+import { EmailLink, WhatsAppLink } from '@/components/ContactLinks';
 import { ClientCombobox } from '@/components/ClientCombobox';
 import { PageHeader } from '@/components/PageHeader';
 import { buildBrokerOptions, formatBrokers, sameBroker } from '@/lib/brokers';
@@ -444,10 +444,10 @@ export const Clients = () => {
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
                       <div className="flex min-w-0 items-center gap-1">
-                        <strong>Email:</strong> <CopyableText value={client.email} label="Email" />
+                        <strong>Email:</strong> <EmailLink email={client.email} />
                       </div>
                       <div className="flex min-w-0 items-center gap-1">
-                        <strong>Teléfono:</strong> <CopyableText value={client.phone} label="Teléfono" />
+                        <strong>Teléfono:</strong> <WhatsAppLink telefono={client.phone} />
                       </div>
                       <div className="flex flex-wrap items-center gap-1">
                         <strong>{client.brokers.length > 1 ? 'Brokers:' : 'Broker:'}</strong>
@@ -545,8 +545,8 @@ export const Clients = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-col">
-                            <CopyableText value={client.email} label="Email" className="text-sm" />
-                            <CopyableText value={client.phone} label="Teléfono" className="text-sm text-muted-foreground" />
+                            <EmailLink email={client.email} className="text-sm" />
+                            <WhatsAppLink telefono={client.phone} className="text-sm text-muted-foreground" />
                           </div>
                         </TableCell>
                         <TableCell>

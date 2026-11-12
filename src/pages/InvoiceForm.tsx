@@ -17,6 +17,7 @@ import {
   FaktiaError,
   faktia,
   faktiaConfigurado,
+  reintentarFaktia,
   formatoMoneda,
   hoyISO,
   numeroComprobante,
@@ -75,6 +76,7 @@ export const InvoiceForm = () => {
     queryFn: faktia.configuracion,
     enabled: faktiaConfigurado,
     staleTime: 10 * 60_000,
+    retry: reintentarFaktia,
   });
 
   // El emisor monotributista factura C sin IVA discriminado

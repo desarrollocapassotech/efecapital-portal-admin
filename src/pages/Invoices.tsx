@@ -6,10 +6,12 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  Ban,
   ExternalLink,
-  FileDown,
+  Eye,
+  FileMinus,
+  FileText,
   Loader2,
-  MoreHorizontal,
   Plus,
   Receipt,
   RefreshCw,
@@ -21,17 +23,29 @@ import {
 import { toast } from 'sonner';
 import { useDataStore } from '@/stores/dataStore';
 import { PageHeader } from '@/components/PageHeader';
+import { InvoiceDetailSheet } from '@/components/InvoiceDetailSheet';
 import { ClientCombobox } from '@/components/ClientCombobox';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import {
   ESTADOS,
   FAKTIA_APP_URL,
+  reintentarFaktia,
   FaktiaError,
   claseDe,
   faktia,
@@ -90,9 +104,19 @@ const SortableHead = ({
 };
 
 /** Estado vacío / error a pantalla completa dentro de la tarjeta. */
-const Aviso = ({ icon: Icon, title, children }: { icon: typeof Receipt; title: string; children?: React.ReactNode }) => (
+const Aviso = ({
+  icon: Icon,
+  title,
+  children,
+  spin = false,
+}: {
+  icon: typeof Receipt;
+  title: string;
+  children?: React.ReactNode;
+  spin?: boolean;
+}) => (
   <div className="flex flex-col items-center gap-3 py-12 text-center">
-    <Icon className="h-8 w-8 text-muted-foreground opacity-50" />
+    <Icon className={`h-8 w-8 ${spin ? 'animate-spin text-primary' : 'text-muted-foreground opacity-50'}`} />
     <p className="font-medium text-foreground">{title}</p>
     {children && <div className="max-w-md text-sm text-muted-foreground">{children}</div>}
   </div>
@@ -107,6 +131,7 @@ export const Invoices = () => {
     queryFn: () => faktia.todosLosComprobantes(),
     enabled: faktiaConfigurado,
     staleTime: 30_000,
+    retry: reintentarFaktia,
   });
 
   // Vincula cada comprobante con el cliente de EFE Capital (por la referencia guardada en Faktia)
@@ -122,6 +147,7 @@ export const Invoices = () => {
     },
     enabled: faktiaConfigurado && clients.length > 0,
     staleTime: 5 * 60_000,
+    retry: reintentarFaktia,
   });
 
   const [draftFilters, setDraftFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -143,16 +169,17 @@ export const Invoices = () => {
     }
   };
 
-  const filtrados = useMemo(
-    () =>
-      comprobantes.filter((c) => {
-        if (appliedFilters.clientId && referencias.get(c.cliente.id) !== appliedFilters.clientId) return false;
-        if (appliedFilters.estado !== ALL && c.estado !== appliedFilters.estado) return false;
-        if (appliedFilters.letra !== ALL && letraDe(c.tipo) !== appliedFilters.letra) return false;
-        return true;
-      }),
-    [comprobantes, appliedFilters, referencias]
-  );
+  // Las notas asociadas a una factura del listado no se muestran aparte: se abren desde la fila de su factura
+  const filtrados = useMemo(() => {
+    const ids = new Set(comprobantes.map((c) => c.id));
+    return comprobantes.filter((c) => {
+      if (c.tipo.startsWith('NOTA_') && c.asociado && ids.has(c.asociado.id)) return false;
+      if (appliedFilters.clientId && referencias.get(c.cliente.id) !== appliedFilters.clientId) return false;
+      if (appliedFilters.letra !== ALL && letraDe(c.tipo) !== appliedFilters.letra) return false;
+      if (appliedFilters.estado !== ALL && c.estado !== appliedFilters.estado) return false;
+      return true;
+    });
+  }, [comprobantes, appliedFilters, referencias]);
 
   const ordenados = useMemo(() => {
     const factor = sortDirection === 'asc' ? 1 : -1;
@@ -172,17 +199,6 @@ export const Invoices = () => {
     };
     return [...filtrados].sort((a, b) => comparar(a, b) * factor || (b.numero ?? 0) - (a.numero ?? 0));
   }, [filtrados, sortKey, sortDirection]);
-
-  // Totales de lo emitido (facturas y notas de débito suman, notas de crédito restan)
-  const totales = useMemo(() => {
-    const porMoneda = new Map<string, number>();
-    for (const c of filtrados) {
-      if (c.estado !== 'EMITIDO') continue;
-      const signo = c.tipo.startsWith('NOTA_CREDITO') ? -1 : 1;
-      porMoneda.set(c.moneda, (porMoneda.get(c.moneda) ?? 0) + signo * Number(c.importes.total));
-    }
-    return [...porMoneda.entries()];
-  }, [filtrados]);
 
   const activeFilters = [
     appliedFilters.clientId && {
@@ -206,11 +222,52 @@ export const Invoices = () => {
     setDraftFilters((p) => ({ ...p, [key]: EMPTY_FILTERS[key] }));
   };
 
-  const ejecutar = async (c: FaktiaComprobante, tipo: 'pdf' | 'emitir' | 'eliminar') => {
-    setAccion(c.id);
+  // Anular = emitir una nota de crédito por el total (pide motivo)
+  // Comprobante abierto en el panel de detalle
+  const [detalle, setDetalle] = useState<FaktiaComprobante | null>(null);
+
+  /** Notas de crédito emitidas sobre un comprobante (con CAE, para poder abrirlas). */
+  const notasCreditoDe = (c: FaktiaComprobante) =>
+    (c.notas ?? [])
+      .filter((n) => n.tipo.startsWith('NOTA_CREDITO') && n.estado === 'EMITIDO')
+      .map((n) => comprobantes.find((x) => x.id === n.id))
+      .filter((n): n is FaktiaComprobante => Boolean(n?.cae));
+
+  const [aAnular, setAAnular] = useState<FaktiaComprobante | null>(null);
+  const [motivo, setMotivo] = useState('');
+
+  const confirmarAnulacion = async () => {
+    const factura = aAnular;
+    if (!factura || !motivo.trim()) return;
+    setAAnular(null);
+    setAccion(factura.id);
+    try {
+      const nc = await faktia.anular(factura, motivo.trim());
+      if (nc.estado === 'EMITIDO') {
+        toast.success(`Factura ${numeroComprobante(factura)} anulada`, {
+          description: `Nota de crédito ${numeroComprobante(nc)} · CAE ${nc.cae}`,
+        });
+      } else {
+        toast.message('Nota de crédito enviada a ARCA', {
+          description: 'No se confirmó todavía; Faktia la verifica sola en unos minutos.',
+        });
+      }
+    } catch (err) {
+      const e = err instanceof FaktiaError ? err : null;
+      toast.error(e?.message ?? 'No se pudo anular la factura', { description: e?.detalle ?? undefined });
+    } finally {
+      setMotivo('');
+      setAccion(null);
+      await queryClient.invalidateQueries({ queryKey: INVOICES_QUERY_KEY });
+    }
+  };
+
+  /** `filaId`: fila que muestra el spinner (ej. al bajar la NC desde la fila de la factura anulada). */
+  const ejecutar = async (c: FaktiaComprobante, tipo: 'pdf' | 'emitir' | 'eliminar', filaId = c.id) => {
+    setAccion(filaId);
     try {
       if (tipo === 'pdf') {
-        await faktia.descargarPdf(c);
+        await faktia.abrirPdf(c);
       } else if (tipo === 'emitir') {
         const r = await faktia.emitir(c.id, c.version);
         if (r.estado === 'EMITIDO') toast.success(`Factura ${numeroComprobante(r)} emitida. CAE ${r.cae}`);
@@ -259,20 +316,6 @@ export const Invoices = () => {
           </>
         }
       />
-
-      {totales.length > 0 && (
-        <div className={`grid grid-cols-1 gap-px border border-border bg-border ${totales.length > 1 ? 'sm:grid-cols-2' : 'sm:max-w-sm'}`}>
-          {totales.map(([moneda, total]) => (
-            <div key={moneda} className="bg-card p-5">
-              <p className="eyebrow">Total facturado{totales.length > 1 ? ` · ${moneda}` : ''}</p>
-              <p className="mt-2 font-display text-2xl font-semibold tabular-nums text-primary">
-                {formatoMoneda(total, moneda as FaktiaComprobante['moneda'])}
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">Comprobantes emitidos, netos de notas de crédito</p>
-            </div>
-          ))}
-        </div>
-      )}
 
       {/* Filtros */}
       <Card>
@@ -375,7 +418,9 @@ export const Invoices = () => {
               Falta definir <code className="bg-muted px-1">VITE_FAKTIA_API_URL</code> en el entorno del panel.
             </Aviso>
           ) : isLoading ? (
-            <Aviso icon={Loader2} title="Cargando comprobantes desde Faktia…" />
+            <Aviso icon={Loader2} spin title="Cargando comprobantes desde Faktia…">
+              La primera carga puede tardar unos segundos.
+            </Aviso>
           ) : error ? (
             <Aviso icon={AlertTriangle} title="No se pudieron cargar las facturas">
               <p>{error instanceof FaktiaError ? error.message : 'Error inesperado.'}</p>
@@ -412,10 +457,11 @@ export const Invoices = () => {
                     <SortableHead label="Fecha" sortKey="fecha" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
                     <SortableHead label="Comprobante" sortKey="numero" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
                     <SortableHead label="Cliente" sortKey="cliente" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
+                    <TableHead>CUIT</TableHead>
                     <TableHead>Detalle</TableHead>
                     <SortableHead label="Total" sortKey="total" activeKey={sortKey} direction={sortDirection} onSort={handleSort} className="text-right" />
                     <SortableHead label="Estado" sortKey="estado" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                    <TableHead className="w-12" />
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -423,20 +469,12 @@ export const Invoices = () => {
                     const efe = clienteEfe(c);
                     const ocupado = accion === c.id;
                     const editable = c.estado === 'BORRADOR' || c.estado === 'RECHAZADO';
+                    // Notas de crédito emitidas que anulan este comprobante (para descargarlas desde la fila)
+                    const notasCredito = notasCreditoDe(c);
                     return (
-                      <TableRow key={c.id} className={c.estado === 'ANULADO' ? 'opacity-60' : ''}>
+                      <TableRow key={c.id}>
                         <TableCell className="whitespace-nowrap text-sm tabular-nums">{formatoFecha(c.fechaEmision)}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex h-5 w-5 items-center justify-center border border-primary/30 text-[11px] font-semibold text-primary">
-                              {letraDe(c.tipo)}
-                            </span>
-                            <div className="leading-tight">
-                              <p className="font-mono text-sm tabular-nums">{numeroComprobante(c)}</p>
-                              <p className="text-xs text-muted-foreground">{claseDe(c.tipo)}</p>
-                            </div>
-                          </div>
-                        </TableCell>
+                        <TableCell className="whitespace-nowrap font-mono text-sm tabular-nums">{numeroComprobante(c)}</TableCell>
                         <TableCell className="text-sm font-medium">
                           {efe ? (
                             <Link to={`/clients/${efe.id}`} className="hover:text-primary hover:underline">
@@ -445,9 +483,10 @@ export const Invoices = () => {
                           ) : (
                             c.cliente.razonSocial
                           )}
-                          <p className="text-xs font-normal text-muted-foreground">
-                            {c.cliente.tipoDocumento} {c.cliente.numeroDocumento}
-                          </p>
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap text-sm tabular-nums text-muted-foreground">
+                          {c.cliente.tipoDocumento === 'CUIT' ? '' : `${c.cliente.tipoDocumento} `}
+                          {c.cliente.numeroDocumento}
                         </TableCell>
                         <TableCell className="max-w-[16rem] text-sm text-muted-foreground">
                           <p className="truncate" title={c.lineas.map((l) => l.descripcion).join(' · ')}>
@@ -464,47 +503,107 @@ export const Invoices = () => {
                           {formatoMoneda(c.importes.total, c.moneda)}
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className={ESTADOS[c.estado].className}>
-                            {ESTADOS[c.estado].label}
-                          </Badge>
-                          {c.ambiente && c.ambiente !== 'PRODUCCION' && (
-                            <p className="mt-1 text-[10px] uppercase tracking-wider text-muted-foreground">Prueba</p>
-                          )}
+                          <div className="flex items-center gap-1 whitespace-nowrap">
+                            {/* Ancho fijo para que todos los estados queden alineados ("Verificando" es el más largo) */}
+                            <Badge variant="outline" className={`w-[6.5rem] justify-center ${ESTADOS[c.estado].className}`}>
+                              {ESTADOS[c.estado].label}
+                            </Badge>
+                            {c.ambiente && c.ambiente !== 'PRODUCCION' && (
+                              <span
+                                className="bg-gold-light/30 px-1 py-px text-[9px] font-semibold uppercase leading-tight tracking-wider text-gold"
+                                title="Emitido en el ambiente de prueba de ARCA (homologación): sin validez fiscal"
+                              >
+                                Prueba
+                              </span>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Acciones" disabled={ocupado}>
-                                {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+                          {/* Acciones como botones de ícono, mismo estilo que la tabla de clientes */}
+                          <div className="flex items-center justify-end gap-2">
+                            {ocupado ? (
+                              <Button variant="outline" size="sm" disabled aria-label="Procesando">
+                                <Loader2 className="h-4 w-4 animate-spin" />
                               </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {c.cae && (
-                                <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => ejecutar(c, 'pdf')}>
-                                  <FileDown className="h-4 w-4" />
-                                  Descargar PDF
-                                </DropdownMenuItem>
-                              )}
-                              {editable && (
-                                <DropdownMenuItem className="cursor-pointer gap-2" onClick={() => ejecutar(c, 'emitir')}>
-                                  <Send className="h-4 w-4" />
-                                  Emitir en ARCA
-                                </DropdownMenuItem>
-                              )}
-                              {c.estado === 'BORRADOR' && (
-                                <DropdownMenuItem
-                                  className="cursor-pointer gap-2 text-destructive focus:text-destructive"
-                                  onClick={() => ejecutar(c, 'eliminar')}
+                            ) : (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setDetalle(c)}
+                                  title="Ver detalle"
+                                  aria-label={`Ver detalle de ${numeroComprobante(c)}`}
                                 >
-                                  <Trash2 className="h-4 w-4" />
-                                  Eliminar borrador
-                                </DropdownMenuItem>
-                              )}
-                              {!c.cae && !editable && (
-                                <DropdownMenuItem disabled className="text-xs">Sin acciones disponibles</DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                {c.cae && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => ejecutar(c, 'pdf')}
+                                    title={`Ver ${claseDe(c.tipo).toLowerCase()}`}
+                                    aria-label={`Ver ${claseDe(c.tipo).toLowerCase()} ${numeroComprobante(c)}`}
+                                  >
+                                    {c.tipo.startsWith('NOTA_CREDITO') ? (
+                                      <FileMinus className="h-4 w-4" />
+                                    ) : (
+                                      <FileText className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                )}
+                                {notasCredito.map((nc) => (
+                                  <Button
+                                    key={nc.id}
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => ejecutar(nc, 'pdf', c.id)}
+                                    title={`Ver nota de crédito ${numeroComprobante(nc)}`}
+                                    aria-label={`Ver nota de crédito ${numeroComprobante(nc)}`}
+                                  >
+                                    <FileMinus className="h-4 w-4" />
+                                  </Button>
+                                ))}
+                                {editable && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => ejecutar(c, 'emitir')}
+                                    title="Emitir en ARCA"
+                                    aria-label={`Emitir ${numeroComprobante(c)} en ARCA`}
+                                  >
+                                    <Send className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {c.estado === 'BORRADOR' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={() => ejecutar(c, 'eliminar')}
+                                    title="Eliminar borrador"
+                                    aria-label="Eliminar borrador"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {c.estado === 'EMITIDO' && c.tipo.startsWith('FACTURA') && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive"
+                                    onClick={() => {
+                                      setMotivo('');
+                                      setAAnular(c);
+                                    }}
+                                    title="Anular (emite una nota de crédito)"
+                                    aria-label={`Anular ${numeroComprobante(c)}`}
+                                  >
+                                    <Ban className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -515,6 +614,55 @@ export const Invoices = () => {
           )}
         </CardContent>
       </Card>
+
+      <InvoiceDetailSheet
+        comprobante={detalle}
+        notasCredito={detalle ? notasCreditoDe(detalle) : []}
+        onOpenChange={(open) => !open && setDetalle(null)}
+        onVerPdf={(c) => ejecutar(c, 'pdf', detalle?.id ?? c.id)}
+      />
+
+      {/* Confirmación de anulación */}
+      <AlertDialog open={Boolean(aAnular)} onOpenChange={(open) => !open && setAAnular(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Anular la factura {aAnular ? numeroComprobante(aAnular) : ''}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {aAnular && (
+                <>
+                  Se emite en ARCA una nota de crédito por el total ({formatoMoneda(aAnular.importes.total, aAnular.moneda)}) a{' '}
+                  {aAnular.cliente.razonSocial}. No se puede deshacer.
+                </>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-1.5">
+            <Label htmlFor="motivo-anulacion">Motivo *</Label>
+            <Textarea
+              id="motivo-anulacion"
+              value={motivo}
+              onChange={(e) => setMotivo(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder="Ej. Error en el importe facturado"
+              autoFocus
+            />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={!motivo.trim()}
+              onClick={(e) => {
+                e.preventDefault();
+                confirmarAnulacion();
+              }}
+            >
+              Emitir nota de crédito
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

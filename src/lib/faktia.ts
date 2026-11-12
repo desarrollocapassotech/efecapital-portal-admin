@@ -73,6 +73,10 @@ export interface FaktiaComprobante {
   caeVencimiento: string | null;
   cliente: FaktiaCliente;
   lineas: FaktiaLinea[];
+  /** Comprobante al que se asocia (ej. la factura que anula una nota de crédito) */
+  asociado?: { id: string; tipo: TipoComprobante; numero: number | null } | null;
+  /** Notas de crédito/débito emitidas sobre este comprobante */
+  notas?: Array<{ id: string; tipo: TipoComprobante; numero: number | null; estado: EstadoComprobante }>;
   observaciones: string | null;
   advertenciaLetra: string | null;
   error: { mensaje: string; detalle: string | null } | null;
@@ -134,7 +138,7 @@ export const ESTADOS: Record<EstadoComprobante, { label: string; className: stri
   PENDIENTE_VERIFICACION: { label: 'Verificando', className: 'bg-gold/10 text-gold border-gold/30' },
   EMITIDO: { label: 'Emitida', className: 'bg-success/10 text-success border-success/30' },
   RECHAZADO: { label: 'Rechazada', className: 'bg-destructive/10 text-destructive border-destructive/30' },
-  ANULADO: { label: 'Anulada', className: 'bg-muted text-muted-foreground border-border line-through' },
+  ANULADO: { label: 'Anulada', className: 'bg-secondary text-foreground border-border' },
 };
 
 export const letraDe = (tipo: TipoComprobante) => tipo.slice(-1) as 'A' | 'B' | 'C';
@@ -211,6 +215,13 @@ async function solicitud(ruta: string, init: RequestInit & { idempotencia?: stri
   return respuesta;
 }
 
+/**
+ * Política de reintentos para React Query: solo errores de red o del servidor (5xx),
+ * hasta 2 veces. Un 4xx (sin permiso, datos inválidos) no se arregla reintentando.
+ */
+export const reintentarFaktia = (intentos: number, error: unknown) =>
+  intentos < 2 && error instanceof FaktiaError && (error.status === 0 || error.status >= 500);
+
 const json = async <T>(ruta: string, init?: RequestInit & { idempotencia?: string }) =>
   (await solicitud(ruta, init)).json() as Promise<T>;
 
@@ -246,19 +257,50 @@ export const faktia = {
       idempotencia: claveIdempotencia(),
     }),
 
+  /** Borrador de nota de crédito/débito sobre una factura emitida (mismas líneas). */
+  crearNota: (id: string, clase: 'NOTA_CREDITO' | 'NOTA_DEBITO', motivo: string) =>
+    json<FaktiaComprobante>(`/comprobantes/${id}/notas`, {
+      method: 'POST',
+      body: JSON.stringify({ clase, motivo }),
+      idempotencia: claveIdempotencia(),
+    }),
+
+  /**
+   * Anula una factura emitida: crea la nota de crédito por el total y la emite en ARCA.
+   * Si ARCA no la acepta, la NC queda en Faktia como borrador/rechazada para revisarla.
+   */
+  async anular(factura: FaktiaComprobante, motivo: string): Promise<FaktiaComprobante> {
+    const nota = await faktia.crearNota(factura.id, 'NOTA_CREDITO', motivo);
+    return faktia.emitir(nota.id, nota.version);
+  },
+
   eliminarBorrador: async (id: string) => {
     await solicitud(`/comprobantes/${id}`, { method: 'DELETE' });
   },
 
-  async descargarPdf(c: FaktiaComprobante) {
-    const blob = await (await solicitud(`/comprobantes/${c.id}/pdf`)).blob();
-    const url = URL.createObjectURL(blob);
-    const a = Object.assign(document.createElement('a'), {
-      href: url,
-      download: `${claseDe(c.tipo)} ${letraDe(c.tipo)} ${numeroComprobante(c)}.pdf`,
-    });
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  /**
+   * Abre el PDF del comprobante en una pestaña nueva.
+   * La pestaña se abre antes de la descarga (en el mismo clic) para que el navegador no la bloquee
+   * como pop-up; el PDF se pide con el token y se muestra cuando llega.
+   */
+  async abrirPdf(c: FaktiaComprobante) {
+    const pestana = window.open('', '_blank');
+    if (pestana) {
+      pestana.document.title = `${claseDe(c.tipo)} ${letraDe(c.tipo)} ${numeroComprobante(c)}`;
+      pestana.document.body.style.cssText = 'font-family:system-ui,sans-serif;color:#555;padding:2rem';
+      pestana.document.body.textContent = 'Cargando comprobante…';
+    }
+    try {
+      const blob = await (await solicitud(`/comprobantes/${c.id}/pdf`)).blob();
+      const url = URL.createObjectURL(new Blob([blob], { type: 'application/pdf' }));
+      if (pestana && !pestana.closed) pestana.location.href = url;
+      else window.open(url, '_blank'); // el navegador bloqueó la pestaña previa
+      // Se libera más tarde: la pestaña necesita la URL mientras carga el PDF
+      setTimeout(() => URL.revokeObjectURL(url), 5 * 60_000);
+    } catch (err) {
+      pestana?.close();
+      throw err;
+    }
   },
 
   padron: (cuit: string) => json<FaktiaPadron>(`/clientes/padron/${encodeURIComponent(cuit.replace(/\D/g, ''))}`),
