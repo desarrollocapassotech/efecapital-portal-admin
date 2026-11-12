@@ -13,7 +13,18 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
   CONDICIONES_IVA,
+  formatoFecha,
   FaktiaError,
   faktia,
   faktiaConfigurado,
@@ -23,20 +34,13 @@ import {
   numeroComprobante,
   type ConceptoArca,
   type CrearBorradorInput,
-  type Moneda,
   type UnidadItem,
 } from '@/lib/faktia';
 import { INVOICES_QUERY_KEY } from '@/pages/Invoices';
+import { montoAInput } from '@/lib/suscripciones';
 
 type Linea = { descripcion: string; cantidad: string; unidad: UnidadItem; precioUnitario: string; alicuotaIva: string };
 
-const ALICUOTAS = ['21', '10.5', '27', '5', '2.5', '0'];
-const UNIDADES: Array<{ value: UnidadItem; label: string }> = [
-  { value: 'SERVICIO', label: 'Servicio' },
-  { value: 'MES', label: 'Mes' },
-  { value: 'HORA', label: 'Hora' },
-  { value: 'UNIDAD', label: 'Unidad' },
-];
 
 const isoLocal = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -66,10 +70,30 @@ const lineaVacia = (alicuotaIva: string): Linea => ({
   alicuotaIva,
 });
 
+const ResumenSeccion = ({ titulo, children }: { titulo: string; children: React.ReactNode }) => (
+  <section className="space-y-1.5 border-t border-border pt-3 text-sm">
+    <h3 className="eyebrow">{titulo}</h3>
+    <dl className="space-y-1">{children}</dl>
+  </section>
+);
+
+const ResumenDato = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-2">
+    <dt className="text-muted-foreground">{label}</dt>
+    <dd className="min-w-0 break-words text-right">{children}</dd>
+  </div>
+);
+
+/** "20384421998" → "20-38442199-8" */
+const formatoCuit = (v: string) => {
+  const d = v.replace(/\D/g, '');
+  return d.length === 11 ? `${d.slice(0, 2)}-${d.slice(2, 10)}-${d.slice(10)}` : v;
+};
+
 export const InvoiceForm = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { clients } = useDataStore();
+  const { clients, servicios } = useDataStore();
 
   const { data: config, isLoading: cargandoConfig, error: errorConfig } = useQuery({
     queryKey: ['faktia', 'configuracion'],
@@ -79,33 +103,30 @@ export const InvoiceForm = () => {
     retry: reintentarFaktia,
   });
 
-  // El emisor monotributista factura C sin IVA discriminado
-  const emisorMonotributo = config?.emisor.condicionIva?.startsWith('MONOTRIBUTO') ?? false;
-  const alicuotaPorDefecto = emisorMonotributo ? '0' : '21';
+  const alicuotaPorDefecto = '0'; // factura C: sin IVA discriminado
 
   const [clientId, setClientId] = useState('');
   const [puntoVentaId, setPuntoVentaId] = useState('');
-  const [tipo, setTipo] = useState<'AUTO' | 'FACTURA_A' | 'FACTURA_B' | 'FACTURA_C'>('AUTO');
   const [fechaEmision, setFechaEmision] = useState(hoyISO());
   const [concepto, setConcepto] = useState<ConceptoArca>('SERVICIOS');
   const [desde, setDesde] = useState(inicioMes());
   const [hasta, setHasta] = useState(finMes());
   const [vtoPago, setVtoPago] = useState(enDias(10));
-  const [moneda, setMoneda] = useState<Moneda>('ARS');
   const [observaciones, setObservaciones] = useState('');
-  const [lineas, setLineas] = useState<Linea[]>([lineaVacia('21')]);
+  const [lineas, setLineas] = useState<Linea[]>([lineaVacia('0')]);
   const [enviando, setEnviando] = useState<'borrador' | 'emitir' | null>(null);
   const [errores, setErrores] = useState<Record<string, string>>({});
 
   const puntoVenta = puntoVentaId || config?.puntosVenta[0]?.id || '';
   const cliente = clients.find((c) => c.id === clientId);
+  const puntoVentaElegido = config?.puntosVenta.find((p) => p.id === puntoVenta);
   const sinDatosFiscales = Boolean(cliente && !cliente.fiscal);
   const esServicio = concepto !== 'PRODUCTOS';
 
-  // Si el emisor es monotributista, las líneas nuevas arrancan en 0% (al cargar la config)
+  // Factura C: sin IVA discriminado
   const lineasEfectivas = useMemo(
-    () => (emisorMonotributo ? lineas.map((l) => ({ ...l, alicuotaIva: '0' })) : lineas),
-    [lineas, emisorMonotributo]
+    () => lineas.map((l) => ({ ...l, alicuotaIva: '0' })),
+    [lineas]
   );
 
   const totales = useMemo(() => {
@@ -118,6 +139,16 @@ export const InvoiceForm = () => {
     }
     return { neto, iva, total: neto + iva };
   }, [lineasEfectivas]);
+
+  /** Completa una línea con un servicio de pago único (reemplaza la línea vacía inicial). */
+  const agregarServicio = (servicioId: string) => {
+    const s = servicios.find((x) => x.id === servicioId);
+    if (!s) return;
+    const linea: Linea = { ...lineaVacia(alicuotaPorDefecto), descripcion: s.nombre, precioUnitario: montoAInput(s.precio) };
+    setLineas((prev) =>
+      prev.length === 1 && !prev[0].descripcion.trim() && !prev[0].precioUnitario.trim() ? [linea] : [...prev, linea]
+    );
+  };
 
   const setLinea = (i: number, cambios: Partial<Linea>) =>
     setLineas((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...cambios } : l)));
@@ -138,11 +169,13 @@ export const InvoiceForm = () => {
       if (!l.descripcion.trim()) e[`linea-${i}`] = 'Falta la descripción';
       else if (!DECIMAL.test(aDecimal(l.cantidad)) || Number(aDecimal(l.cantidad)) <= 0) e[`linea-${i}`] = 'Cantidad inválida';
       else if (!DECIMAL.test(aDecimal(l.precioUnitario)) || Number(aDecimal(l.precioUnitario)) <= 0)
-        e[`linea-${i}`] = 'Precio inválido';
+        e[`linea-${i}`] = 'Falta el importe (ej. 79900 o 79.900,50)';
     });
     setErrores(e);
     return Object.keys(e).length === 0;
   };
+
+  const [confirmarEmision, setConfirmarEmision] = useState(false);
 
   const enviar = async (modo: 'borrador' | 'emitir') => {
     if (!validar() || !cliente) {
@@ -156,11 +189,11 @@ export const InvoiceForm = () => {
       const datos: CrearBorradorInput = {
         clienteId: clienteFaktia.id,
         puntoVentaId: puntoVenta,
-        ...(tipo !== 'AUTO' ? { tipo } : {}),
+        tipo: 'FACTURA_C', // EFE Capital emite siempre factura C (monotributo)
         fechaEmision,
         concepto,
         ...(esServicio ? { fechaServicioDesde: desde, fechaServicioHasta: hasta, fechaVtoPago: vtoPago } : {}),
-        moneda,
+        moneda: 'ARS', // siempre en pesos
         observaciones: observaciones.trim() || null,
         lineas: lineasEfectivas.map((l) => ({
           descripcion: l.descripcion.trim(),
@@ -224,17 +257,17 @@ export const InvoiceForm = () => {
       <PageHeader
         breadcrumbs={[{ label: 'Facturas', to: '/invoices' }, { label: 'Nueva factura' }]}
         title="Nueva factura"
-        description={
-          config
-            ? `Emisor: ${config.emisor.razonSocial} · CUIT ${config.emisor.cuit}${config.emisor.ambiente !== 'PRODUCCION' ? ' · AMBIENTE DE PRUEBA' : ''}`
-            : undefined
-        }
       />
 
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          enviar('emitir');
+          // Emitir siempre pide confirmación (una factura emitida solo se anula con nota de crédito)
+          if (!validar() || !cliente) {
+            toast.error('Revisá los datos de la factura');
+            return;
+          }
+          setConfirmarEmision(true);
         }}
         className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3"
       >
@@ -291,31 +324,9 @@ export const InvoiceForm = () => {
                   </Select>
                 </div>
                 <div>
-                  <Label htmlFor="tipo">Tipo</Label>
-                  <Select value={tipo} onValueChange={(v) => setTipo(v as typeof tipo)}>
-                    <SelectTrigger id="tipo">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="AUTO">Automático</SelectItem>
-                      <SelectItem value="FACTURA_A">Factura A</SelectItem>
-                      <SelectItem value="FACTURA_B">Factura B</SelectItem>
-                      <SelectItem value="FACTURA_C">Factura C</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
                   <Label htmlFor="fechaEmision">Fecha de emisión</Label>
                   <Input id="fechaEmision" type="date" value={fechaEmision} onChange={(e) => setFechaEmision(e.target.value)} />
                 </div>
-              </div>
-              {tipo === 'AUTO' && (
-                <p className="text-xs text-muted-foreground">
-                  Faktia elige la letra según la condición de IVA del emisor y del cliente.
-                </p>
-              )}
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
                 <div>
                   <Label htmlFor="concepto">Concepto</Label>
                   <Select value={concepto} onValueChange={(v) => setConcepto(v as ConceptoArca)}>
@@ -326,18 +337,6 @@ export const InvoiceForm = () => {
                       <SelectItem value="SERVICIOS">Servicios</SelectItem>
                       <SelectItem value="PRODUCTOS">Productos</SelectItem>
                       <SelectItem value="PRODUCTOS_Y_SERVICIOS">Productos y servicios</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="moneda">Moneda</Label>
-                  <Select value={moneda} onValueChange={(v) => setMoneda(v as Moneda)}>
-                    <SelectTrigger id="moneda">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="ARS">Pesos (ARS)</SelectItem>
-                      <SelectItem value="USD">Dólares (USD)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -367,23 +366,48 @@ export const InvoiceForm = () => {
 
           {/* Líneas */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardHeader className="flex flex-col gap-2 space-y-0 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>Detalle</CardTitle>
-              <Button type="button" variant="outline" size="sm" onClick={() => setLineas((p) => [...p, lineaVacia(alicuotaPorDefecto)])}>
-                <Plus className="h-4 w-4" />
-                Agregar línea
-              </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                {servicios.length > 0 && (
+                  <Select value="" onValueChange={agregarServicio}>
+                    <SelectTrigger className="h-9 sm:w-64" aria-label="Agregar servicio">
+                      <SelectValue placeholder="Agregar servicio…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {servicios.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.nombre} · {formatoMoneda(s.precio)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <Button type="button" variant="outline" size="sm" className="h-9" onClick={() => setLineas((p) => [...p, lineaVacia(alicuotaPorDefecto)])}>
+                  <Plus className="h-4 w-4" />
+                  Agregar línea
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="space-y-3">
               {lineasEfectivas.map((l, i) => (
-                <div key={i} className="space-y-2 border border-border p-3">
-                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+                // Cantidad 1, unidad Servicio e IVA según el emisor van fijos: solo se cargan descripción y precio
+                <div key={i} className="space-y-2">
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-2 sm:grid-cols-[minmax(0,1fr)_11rem_auto]">
                     <Input
                       value={l.descripcion}
                       onChange={(e) => setLinea(i, { descripcion: e.target.value })}
                       placeholder="Descripción (ej. Honorarios asesoría financiera)"
                       aria-label="Descripción"
-                      className={errores[`linea-${i}`] && !l.descripcion.trim() ? 'border-destructive' : ''}
+                      className={`col-span-2 sm:col-span-1 ${errores[`linea-${i}`] && !l.descripcion.trim() ? 'border-destructive' : ''}`}
+                    />
+                    <Input
+                      inputMode="decimal"
+                      value={l.precioUnitario}
+                      onChange={(e) => setLinea(i, { precioUnitario: e.target.value })}
+                      placeholder="Importe"
+                      aria-label="Importe"
+                      className={`text-right tabular-nums ${errores[`linea-${i}`] && l.descripcion.trim() ? 'border-destructive' : ''}`}
                     />
                     <Button
                       type="button"
@@ -397,57 +421,9 @@ export const InvoiceForm = () => {
                       <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Cantidad</Label>
-                      <Input inputMode="decimal" value={l.cantidad} onChange={(e) => setLinea(i, { cantidad: e.target.value })} />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Unidad</Label>
-                      <Select value={l.unidad} onValueChange={(v) => setLinea(i, { unidad: v as UnidadItem })}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {UNIDADES.map((u) => (
-                            <SelectItem key={u.value} value={u.value}>
-                              {u.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">Precio unitario (sin IVA)</Label>
-                      <Input
-                        inputMode="decimal"
-                        value={l.precioUnitario}
-                        onChange={(e) => setLinea(i, { precioUnitario: e.target.value })}
-                        placeholder="0,00"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-muted-foreground">IVA</Label>
-                      <Select value={l.alicuotaIva} onValueChange={(v) => setLinea(i, { alicuotaIva: v })} disabled={emisorMonotributo}>
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ALICUOTAS.map((a) => (
-                            <SelectItem key={a} value={a}>
-                              {a.replace('.', ',')}%
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
                   {errores[`linea-${i}`] && <p className="text-sm text-destructive">{errores[`linea-${i}`]}</p>}
                 </div>
               ))}
-              {emisorMonotributo && (
-                <p className="text-xs text-muted-foreground">El emisor es monotributista: la factura no discrimina IVA.</p>
-              )}
             </CardContent>
           </Card>
 
@@ -473,25 +449,79 @@ export const InvoiceForm = () => {
             <CardTitle>Resumen</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <dl className="space-y-2 text-sm">
-              {!emisorMonotributo && (
+            {config && config.emisor.ambiente !== 'PRODUCCION' && (
+              <p className="border-l-2 border-gold bg-gold/10 p-2 text-xs">
+                Ambiente de prueba (homologación): las facturas no tienen validez fiscal.
+              </p>
+            )}
+
+            <ResumenSeccion titulo="Emisor">
+              {config ? (
                 <>
-                  <div className="flex justify-between">
-                    <dt className="text-muted-foreground">Neto gravado</dt>
-                    <dd className="tabular-nums">{formatoMoneda(totales.neto, moneda)}</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-muted-foreground">IVA</dt>
-                    <dd className="tabular-nums">{formatoMoneda(totales.iva, moneda)}</dd>
-                  </div>
+                  <ResumenDato label="Razón social">{config.emisor.razonSocial}</ResumenDato>
+                  <ResumenDato label="CUIT">{formatoCuit(config.emisor.cuit)}</ResumenDato>
+                  <ResumenDato label="Condición IVA">
+                    {CONDICIONES_IVA.find((c) => c.value === config.emisor.condicionIva)?.label ?? config.emisor.condicionIva}
+                  </ResumenDato>
+                  {config.emisor.domicilioFiscal && <ResumenDato label="Domicilio">{config.emisor.domicilioFiscal}</ResumenDato>}
+                  {config.emisor.ingresosBrutos && <ResumenDato label="IIBB">{config.emisor.ingresosBrutos}</ResumenDato>}
+                  {config.emisor.inicioActividades && (
+                    <ResumenDato label="Inicio de act.">{formatoFecha(config.emisor.inicioActividades)}</ResumenDato>
+                  )}
+                </>
+              ) : (
+                <p className="text-muted-foreground">{cargandoConfig ? 'Cargando…' : '—'}</p>
+              )}
+            </ResumenSeccion>
+
+            <ResumenSeccion titulo="Comprobante">
+              <ResumenDato label="Tipo">Factura C</ResumenDato>
+              <ResumenDato label="Punto de venta">
+                {puntoVentaElegido ? String(puntoVentaElegido.numero).padStart(4, '0') : '—'}
+              </ResumenDato>
+              <ResumenDato label="Fecha">{formatoFecha(fechaEmision)}</ResumenDato>
+              {esServicio && (
+                <>
+                  <ResumenDato label="Período">
+                    {formatoFecha(desde)} al {formatoFecha(hasta)}
+                  </ResumenDato>
+                  <ResumenDato label="Vencimiento">{formatoFecha(vtoPago)}</ResumenDato>
                 </>
               )}
-              <div className="flex justify-between border-t border-border pt-2 text-base font-semibold">
+              <ResumenDato label="Moneda">Pesos (ARS)</ResumenDato>
+            </ResumenSeccion>
+
+            <ResumenSeccion titulo="Receptor">
+              {cliente ? (
+                <>
+                  <ResumenDato label="Cliente">{cliente.fiscal?.razonSocial || `${cliente.firstName} ${cliente.lastName}`.trim()}</ResumenDato>
+                  {cliente.fiscal ? (
+                    <>
+                      <ResumenDato label={cliente.fiscal.tipoDocumento}>
+                        {cliente.fiscal.tipoDocumento === 'CUIT' || cliente.fiscal.tipoDocumento === 'CUIL'
+                          ? formatoCuit(cliente.fiscal.numeroDocumento)
+                          : cliente.fiscal.numeroDocumento}
+                      </ResumenDato>
+                      <ResumenDato label="Condición IVA">
+                        {CONDICIONES_IVA.find((c) => c.value === cliente.fiscal!.condicionIva)?.label ?? cliente.fiscal.condicionIva}
+                      </ResumenDato>
+                      {cliente.fiscal.domicilio && <ResumenDato label="Domicilio">{cliente.fiscal.domicilio}</ResumenDato>}
+                    </>
+                  ) : (
+                    <p className="text-gold">Sin datos fiscales</p>
+                  )}
+                </>
+              ) : (
+                <p className="text-muted-foreground">Elegí un cliente</p>
+              )}
+            </ResumenSeccion>
+
+            <dl className="text-sm">
+              <div className="flex justify-between border-t border-border pt-3 text-base font-semibold">
                 <dt>Total</dt>
-                <dd className="font-display tabular-nums text-primary">{formatoMoneda(totales.total, moneda)}</dd>
+                <dd className="font-display tabular-nums text-primary">{formatoMoneda(totales.total)}</dd>
               </div>
             </dl>
-            <p className="text-xs text-muted-foreground">Importe estimado: el definitivo lo calcula Faktia al emitir.</p>
 
             <div className="space-y-2 border-t border-border pt-4">
               <Button type="submit" className="w-full" disabled={Boolean(enviando) || cargandoConfig}>
@@ -508,13 +538,35 @@ export const InvoiceForm = () => {
                 {enviando === 'borrador' ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 Guardar borrador
               </Button>
-              <p className="text-xs text-muted-foreground">
-                Emitir la envía a ARCA y obtiene el CAE. Una factura emitida solo se anula con una nota de crédito.
-              </p>
             </div>
           </CardContent>
         </Card>
       </form>
+
+      <AlertDialog open={confirmarEmision} onOpenChange={setConfirmarEmision}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Emitir la factura?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                <p className="text-foreground">
+                  Factura C a {cliente ? `${cliente.firstName} ${cliente.lastName}`.trim() : '—'} por {formatoMoneda(totales.total)}
+                </p>
+                <p>Se envía a ARCA y obtiene CAE. No se puede deshacer: una factura emitida solo se anula con una nota de crédito.</p>
+                {config && config.emisor.ambiente !== 'PRODUCCION' && (
+                  <p className="border-l-2 border-gold bg-gold/10 p-2 text-foreground">
+                    Faktia está en ambiente de prueba: la factura no tiene validez fiscal.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => enviar('emitir')}>Emitir</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

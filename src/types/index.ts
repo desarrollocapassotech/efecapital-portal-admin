@@ -45,6 +45,13 @@ export interface Plan {
   precio: number;
 }
 
+/** Servicio de pago único (se factura una vez desde "Nueva factura", no entra en la facturación mensual). */
+export interface Servicio {
+  id: string;
+  nombre: string;
+  precio: number;
+}
+
 /** Datos fiscales de un receptor de factura (cliente o broker). */
 export type DatosFiscales = ClientFiscal;
 

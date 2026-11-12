@@ -84,7 +84,18 @@ export interface FaktiaComprobante {
 }
 
 export interface FaktiaConfiguracion {
-  emisor: { razonSocial: string; nombreFantasia: string; cuit: string; condicionIva: CondicionIva; ambiente: string };
+  emisor: {
+    razonSocial: string;
+    nombreFantasia: string;
+    cuit: string;
+    condicionIva: CondicionIva;
+    /** Los tres siguientes los agregó Faktia después: pueden faltar en un backend sin actualizar */
+    domicilioFiscal?: string;
+    ingresosBrutos?: string | null;
+    /** YYYY-MM-DD */
+    inicioActividades?: string | null;
+    ambiente: string;
+  };
   puntosVenta: Array<{ id: string; numero: number; descripcion: string | null }>;
 }
 

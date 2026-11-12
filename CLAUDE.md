@@ -12,6 +12,8 @@ Las facturas se emiten con **Faktia** (proyecto en `../../FAKTIA`, API pública 
 - Cliente HTTP en `src/lib/faktia.ts`. Sin API key en el navegador: cada llamada va con el ID token de Firebase del usuario y Faktia lo valida (federación, `FIREBASE_FEDERACION` en faktia-backend; ver `docs/PRODUCCION.md` allá).
 - Config: `VITE_FAKTIA_API_URL` (ver `.env.example`).
 - Cliente EFE ↔ cliente Faktia: se asocian por `referenciaExterna` = id del cliente en Firestore (`faktia.asegurarCliente`). Para facturar, el cliente necesita `fiscal` (documento + condición IVA), que se carga en el formulario de cliente.
+- **Emitir siempre pide confirmación** (`AlertDialog` con receptor, total y aviso de que no se puede deshacer): en "Nueva factura", al emitir un borrador desde el listado y en Facturación mensual. Toda entrada nueva que emita en ARCA tiene que hacer lo mismo.
+- **Siempre factura C en pesos (ARS)**, sin IVA discriminado (alícuota 0). No hay selector de moneda. Se manda `tipo: 'FACTURA_C'` desde "Nueva factura" y desde Facturación mensual; no hay selector de tipo. Cada línea de "Nueva factura" tiene solo descripción e importe (cantidad 1, unidad Servicio).
 - Pantallas: `/invoices` (listado, emitir borradores, PDF) y `/invoices/new`. La futura **cuenta corriente** (pagos/saldos) va aparte y se apoya en estos comprobantes.
 
 ## Facturación mensual (suscripciones y comisiones)
@@ -26,6 +28,8 @@ Suscripción del cliente (`client.suscripcion`, lógica en `src/lib/suscripcione
 - `desde` = mes de alta (se cobra completo), `hasta` = último mes facturado (baja), `planId` opcional.
 - `historial` de montos con vigencia `desde`. **Cada cliente tiene su propio monto** (los viejos pueden quedar atrasados respecto del plan). Un cambio rige desde el mes en curso, así la factura del mes anterior sale con el monto viejo. La opción "Es una corrección" reemplaza todo el historial.
 - Planes (`planes` en Firestore: `nombre`, `precio`) en `/plans`. "Actualizar precio" cambia el precio del plan y lo aplica solo a los clientes tildados: por defecto, los que pagaban el precio vigente; los atrasados quedan como están.
+
+Servicios de pago único (`servicios` en Firestore: `nombre`, `precio`): ABM en `/services` (`Services.tsx`, alta y edición en diálogo). No entran en la facturación mensual. Se eligen en "Nueva factura" con "Agregar servicio…", que completa la línea con el nombre y el precio. Cargados al 2026-11-12: plan mensual "Asesoramiento con seguimiento" $14.900; servicios "Tu primera inversión" $79.900, "Asesoramiento por única vez" $79.900 y "Diagnóstico inicial (asesoramiento con seguimiento)" $34.900.
 
 Receptores en Faktia: clientes con `referenciaExterna` = id del cliente; brokers con `broker:<id>` (`faktia.asegurarReceptor`).
 

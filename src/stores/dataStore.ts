@@ -26,6 +26,7 @@ import {
   Note,
   Notification,
   Plan,
+  Servicio,
 } from '@/types';
 import { notificationService } from '@/lib/notifications';
 import { conNuevoMonto, suscripcionDesdeDatos } from '@/lib/suscripciones';
@@ -86,7 +87,7 @@ interface AddDocumentInput {
   file: File;
 }
 
-const collectionKeys = ['clients', 'messages', 'brokers', 'documents', 'planes'] as const;
+const collectionKeys = ['clients', 'messages', 'brokers', 'documents', 'planes', 'servicios'] as const;
 type CollectionKey = (typeof collectionKeys)[number];
 
 /** Firestore no acepta `undefined`: se quitan esas claves. */
@@ -99,6 +100,7 @@ interface DataStore {
   clients: Client[];
   brokers: Broker[];
   planes: Plan[];
+  servicios: Servicio[];
   messages: Message[];
   documents: Document[];
   activities: Activity[];
@@ -121,6 +123,10 @@ interface DataStore {
   deletePlan: (id: string) => Promise<void>;
   /** Cambia el precio del plan y, a los clientes indicados, les aplica el nuevo monto desde el mes en curso. */
   actualizarPrecioPlan: (planId: string, precio: number, clientIds: string[]) => Promise<void>;
+
+  addServicio: (servicio: Omit<Servicio, 'id'>) => Promise<void>;
+  updateServicio: (id: string, servicio: Omit<Servicio, 'id'>) => Promise<void>;
+  deleteServicio: (id: string) => Promise<void>;
 
   addClient: (client: Omit<Client, 'id' | 'createdAt'>) => Promise<void>;
   updateClient: (id: string, updates: Partial<Client>) => Promise<void>;
@@ -146,6 +152,7 @@ export const useDataStore = create<DataStore>((set, get) => {
   let brokersUnsubscribe: Unsubscribe | null = null;
   let documentsUnsubscribe: Unsubscribe | null = null;
   let planesUnsubscribe: Unsubscribe | null = null;
+  let serviciosUnsubscribe: Unsubscribe | null = null;
   const migratedClientIds = new Set<string>();
   let defaultBrokersEnsured = false;
 
@@ -155,6 +162,7 @@ export const useDataStore = create<DataStore>((set, get) => {
     brokers: false,
     documents: false,
     planes: false,
+    servicios: false,
   };
 
   const resetLoadingState = () => {
@@ -184,6 +192,7 @@ export const useDataStore = create<DataStore>((set, get) => {
     clients: [],
     brokers: [],
     planes: [],
+    servicios: [],
     messages: [],
     documents: [],
     activities: [],
@@ -196,7 +205,8 @@ export const useDataStore = create<DataStore>((set, get) => {
         !messagesUnsubscribe ||
         !brokersUnsubscribe ||
         !documentsUnsubscribe ||
-        !planesUnsubscribe;
+        !planesUnsubscribe ||
+        !serviciosUnsubscribe;
 
       if (shouldResetLoading) {
         resetLoadingState();
@@ -380,6 +390,28 @@ export const useDataStore = create<DataStore>((set, get) => {
         );
       }
 
+      if (!serviciosUnsubscribe) {
+        serviciosUnsubscribe = onSnapshot(
+          query(collection(db, 'servicios'), orderBy('nombre', 'asc')),
+          (snapshot) => {
+            const servicios = snapshot.docs.map((docSnapshot) => {
+              const data = docSnapshot.data();
+              return {
+                id: docSnapshot.id,
+                nombre: data.nombre ?? '',
+                precio: typeof data.precio === 'number' ? data.precio : 0,
+              } satisfies Servicio;
+            });
+            set({ servicios });
+            markCollectionAsLoaded('servicios');
+          },
+          (error) => {
+            console.error('No se pudieron leer los servicios', error);
+            markCollectionAsLoaded('servicios');
+          }
+        );
+      }
+
     },
 
     stopDataListeners: () => {
@@ -403,11 +435,16 @@ export const useDataStore = create<DataStore>((set, get) => {
         planesUnsubscribe();
         planesUnsubscribe = null;
       }
+      if (serviciosUnsubscribe) {
+        serviciosUnsubscribe();
+        serviciosUnsubscribe = null;
+      }
 
       set({
         clients: [],
         brokers: [],
         planes: [],
+        servicios: [],
         messages: [],
         documents: [],
         activities: [],
@@ -517,6 +554,18 @@ export const useDataStore = create<DataStore>((set, get) => {
           });
         });
       await batch.commit();
+    },
+
+    addServicio: async ({ nombre, precio }) => {
+      await addDoc(collection(db, 'servicios'), { nombre: nombre.trim(), precio });
+    },
+
+    updateServicio: async (id, { nombre, precio }) => {
+      await updateDoc(doc(db, 'servicios', id), { nombre: nombre.trim(), precio });
+    },
+
+    deleteServicio: async (id) => {
+      await deleteDoc(doc(db, 'servicios', id));
     },
 
     addClient: async (clientData) => {

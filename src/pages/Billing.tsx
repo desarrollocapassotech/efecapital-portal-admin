@@ -130,7 +130,6 @@ export const Billing = () => {
     staleTime: 10 * 60_000,
     retry: reintentarFaktia,
   });
-  const emisorMonotributo = config?.emisor.condicionIva?.startsWith('MONOTRIBUTO') ?? false;
   const [puntoVentaId, setPuntoVentaId] = useState('');
   const puntoVenta = puntoVentaId || config?.puntosVenta[0]?.id || '';
 
@@ -255,6 +254,7 @@ export const Billing = () => {
             {
               clienteId: receptor.id,
               puntoVentaId: puntoVenta,
+              tipo: 'FACTURA_C', // EFE Capital emite siempre factura C (monotributo)
               fechaEmision,
               concepto: 'SERVICIOS',
               fechaServicioDesde: desde,
@@ -267,7 +267,7 @@ export const Billing = () => {
                   cantidad: '1',
                   unidad,
                   precioUnitario: montoADecimal(monto),
-                  alicuotaIva: emisorMonotributo ? '0' : '21',
+                  alicuotaIva: '0', // factura C: sin IVA discriminado
                 },
               ],
             },
@@ -472,7 +472,6 @@ export const Billing = () => {
             )}
             <p className="text-sm text-muted-foreground sm:col-start-3">
               Mes vencido. Se emiten con fecha de hoy y vencimiento a {DIAS_VENCIMIENTO} días.
-              {!emisorMonotributo && config && ' Los montos son sin IVA: se suma 21%.'}
             </p>
             <Button
               variant="outline"
@@ -704,7 +703,6 @@ export const Billing = () => {
                 </ul>
                 <p>
                   Se envían a ARCA y obtienen CAE. No se puede deshacer: una factura emitida solo se anula con una nota de crédito.
-                  {!emisorMonotributo && ' A los montos se les suma el IVA.'}
                 </p>
                 {config && config.emisor.ambiente !== 'PRODUCCION' && (
                   <p className="border-l-2 border-gold bg-gold/10 p-2 text-foreground">Faktia está en ambiente de prueba: las facturas no tienen validez fiscal.</p>

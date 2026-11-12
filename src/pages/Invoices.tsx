@@ -235,6 +235,8 @@ export const Invoices = () => {
       .filter((n): n is FaktiaComprobante => Boolean(n?.cae));
 
   const [aAnular, setAAnular] = useState<FaktiaComprobante | null>(null);
+  // Borrador a emitir: emitir siempre pide confirmación
+  const [aEmitir, setAEmitir] = useState<FaktiaComprobante | null>(null);
   const [motivo, setMotivo] = useState('');
 
   const confirmarAnulacion = async () => {
@@ -574,7 +576,7 @@ export const Invoices = () => {
                                   <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => ejecutar(c, 'emitir')}
+                                    onClick={() => setAEmitir(c)}
                                     title="Emitir en ARCA"
                                     aria-label={`Emitir ${numeroComprobante(c)} en ARCA`}
                                   >
@@ -628,6 +630,43 @@ export const Invoices = () => {
         onOpenChange={(open) => !open && setDetalle(null)}
         onVerPdf={(c) => ejecutar(c, 'pdf', detalle?.id ?? c.id)}
       />
+
+      {/* Confirmación de emisión */}
+      <AlertDialog open={Boolean(aEmitir)} onOpenChange={(open) => !open && setAEmitir(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Emitir la factura?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                {aEmitir && (
+                  <p className="text-foreground">
+                    {claseDe(aEmitir.tipo)} {letraDe(aEmitir.tipo)} a {aEmitir.cliente.razonSocial} por{' '}
+                    {formatoMoneda(aEmitir.importes.total, aEmitir.moneda)}
+                  </p>
+                )}
+                <p>Se envía a ARCA y obtiene CAE. No se puede deshacer: una factura emitida solo se anula con una nota de crédito.</p>
+                {aEmitir && aEmitir.ambiente !== 'PRODUCCION' && (
+                  <p className="border-l-2 border-gold bg-gold/10 p-2 text-foreground">
+                    Ambiente de prueba: la factura no tiene validez fiscal.
+                  </p>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                const c = aEmitir;
+                setAEmitir(null);
+                if (c) ejecutar(c, 'emitir');
+              }}
+            >
+              Emitir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Confirmación de anulación */}
       <AlertDialog open={Boolean(aAnular)} onOpenChange={(open) => !open && setAAnular(null)}>

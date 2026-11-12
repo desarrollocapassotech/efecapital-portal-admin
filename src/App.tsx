@@ -19,6 +19,7 @@ import { InvoiceForm } from "./pages/InvoiceForm";
 import { Brokers } from "./pages/Brokers";
 import { BrokerForm } from "./pages/BrokerForm";
 import { Plans } from "./pages/Plans";
+import { Services } from "./pages/Services";
 import { Billing } from "./pages/Billing";
 import Index from "./pages/Index";
 import { useAuthStore } from "@/stores/authStore";
@@ -79,6 +80,7 @@ const App = () => {
               <Route path="brokers/new" element={<BrokerForm />} />
               <Route path="brokers/:id/edit" element={<BrokerForm />} />
               <Route path="plans" element={<Plans />} />
+              <Route path="services" element={<Services />} />
               <Route path="invoices" element={<Invoices />} />
               <Route path="invoices/new" element={<InvoiceForm />} />
               <Route path="invoices/monthly" element={<Billing />} />
