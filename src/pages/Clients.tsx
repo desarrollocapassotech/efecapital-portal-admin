@@ -28,6 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useShowPreviewModules } from '@/stores/previewStore';
 import { EmailLink, WhatsAppLink } from '@/components/ContactLinks';
+import { ClientDetailSheet } from '@/components/ClientDetailSheet';
 import { ClientCombobox } from '@/components/ClientCombobox';
 import { PageHeader } from '@/components/PageHeader';
 import { buildBrokerOptions, formatBrokers, sameBroker } from '@/lib/brokers';
@@ -146,6 +147,8 @@ export const Clients = () => {
   const navigate = useNavigate();
   const { clients, brokers, deleteClient, messages, documents } = useDataStore();
   const showPreviewModules = useShowPreviewModules();
+  // Cliente abierto en el panel de detalle
+  const [detalle, setDetalle] = useState<Client | null>(null);
 
   // Filtros: `draft` es lo que se edita en el formulario; `applied` se usa al filtrar (se actualiza con "Buscar")
   const [draftFilters, setDraftFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -471,7 +474,9 @@ export const Clients = () => {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigate(`/clients/${client.id}`)}
+                          onClick={() => setDetalle(client)}
+                          title="Ver detalle"
+                          aria-label={`Ver detalle de ${client.firstName} ${client.lastName}`}
                           className="text-xs sm:text-sm"
                         >
                           <Eye className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -577,7 +582,9 @@ export const Clients = () => {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => navigate(`/clients/${client.id}`)}
+                              onClick={() => setDetalle(client)}
+                          title="Ver detalle"
+                          aria-label={`Ver detalle de ${client.firstName} ${client.lastName}`}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
@@ -624,6 +631,7 @@ export const Clients = () => {
           )}
         </CardContent>
       </Card>
+      <ClientDetailSheet client={detalle} onOpenChange={(open) => !open && setDetalle(null)} />
     </div>
   );
 };

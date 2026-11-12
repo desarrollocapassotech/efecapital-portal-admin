@@ -63,11 +63,33 @@ Todos están definidos como tokens HSL en `src/index.css` y expuestos en `tailwi
 ### Layout
 - **Menú lateral** (`src/components/Sidebar.tsx`): fondo `bg-sidebar`, logo blanco (`public/logo-white.png`) + "EFE CAPITAL" en Montserrat espaciada, `.brand-bar` debajo. Ítem activo: `bg-sidebar-accent`, texto blanco, barra dorada de 3px a la izquierda e ícono `text-gold-light`. Contraíble en desktop (`w-64` ↔ `lg:w-16`, se guarda en `localStorage`); en móvil es un panel deslizable.
 - **Barra superior** (`src/components/Layout.tsx` + `UserMenu.tsx`): en desktop, barra blanca `h-14` con el usuario (iniciales cuadradas + nombre/email) y un botón **"Cerrar sesión" separado, visible, no dentro de un desplegable**. En móvil, la barra azul incluye mensajes, iniciales y botón de salir.
-- **Encabezado de página**: siempre `PageHeader` (`src/components/PageHeader.tsx`) con breadcrumb + título + acciones. **No usar botones "Volver"**; la navegación hacia atrás es el breadcrumb (ej. `Clientes › Juan Pérez › Editar`).
+- **Encabezado de página**: siempre `PageHeader` (`src/components/PageHeader.tsx`) con breadcrumb + título + acciones. **No usar botones "Volver"**; la navegación hacia atrás es el breadcrumb (ej. `Clientes › Juan Pérez › Editar`). En páginas de primer nivel (un solo nivel) el breadcrumb no se muestra porque repetiría el título.
 - Las páginas dejan espacio para la barra móvil (`pt-16`/`pt-20` en móvil, `lg:pt-*` en desktop).
 - Iconos: `lucide-react`, tamaño `h-4 w-4` en navegación y tarjetas.
+
+### Pantallas de listado (patrón general)
+Referencias: `src/pages/Clients.tsx` y `src/pages/Invoices.tsx`. Toda pantalla nueva de listado sigue este esquema:
+
+1. **`PageHeader`** con la acción principal a la derecha (ej. "Nueva factura"). Sin tarjetas de totales/KPI arriba del listado.
+2. **Barra de filtros** en una `Card`: rótulos con `.eyebrow`, un campo por criterio (selects; para elegir un cliente, `ClientCombobox` con buscador) y botón **Buscar**. El listado **solo se filtra al tocar Buscar o Enter** (estado `draft` vs. `applied`).
+3. **Filtros aplicados como badges removibles** debajo de la barra (`Etiqueta: valor ×`), y "Limpiar todo" si hay más de uno. Quitar un badge limpia también el campo.
+4. **Tabla** en una `Card` con título y contador (`Clientes (4)`):
+   - Encabezados ordenables (`SortableHead`): clic ordena, segundo clic invierte; flecha en la columna activa. Definir un orden por defecto con sentido (ej. fecha más reciente primero) y desempatar siempre por nombre.
+   - Un dato por columna (ej. CUIT en su propia columna, no debajo del nombre). Sin avatares ni iniciales.
+   - Estados como `Badge` de **ancho fijo** y centrados para que queden alineados; marcas secundarias (ej. "Prueba") como etiqueta chica y sutil en la misma línea, no en otra fila.
+   - Nada atenuado ni tachado para indicar estado: el estado lo dice el badge.
+5. **Columna "Acciones"** a la derecha con **botones de ícono** `variant="outline" size="sm"`, sin texto, con `title`/`aria-label` (tooltip). Orden: **ver detalle (ojo)** primero, luego acciones específicas, y destructivas al final en rojo (`text-destructive`). Nada de menús de "⋯".
+6. **Botón ver (ojo) → panel lateral** (`Sheet` desde la derecha, `sm:max-w-2xl`), nunca navegar a otra página. Ver `ClientDetailSheet.tsx` / `InvoiceDetailSheet.tsx`: encabezado con badge de estado + título + subtítulo, secciones separadas por borde con rótulo `.eyebrow`, filas `rótulo | valor`, y acciones al pie (ej. "Editar", "Ver ficha completa", "Ver PDF").
+7. **Móvil**: la tabla se vuelve tarjetas apiladas con las mismas acciones; el orden se elige con un select.
+8. **Estados vacíos / error / carga** dentro de la tarjeta, centrados con ícono (spinner que gira mientras carga) y una acción (Reintentar, crear el primero).
+
+### Datos de contacto y documentos
+- Email → ícono de sobre que abre `mailto:`; teléfono → ícono de WhatsApp que abre `wa.me` en pestaña nueva (`EmailLink` / `WhatsAppLink` en `src/components/ContactLinks.tsx`; normaliza números argentinos a `549…`).
+- Comprobantes y PDFs **se abren en una pestaña nueva**, no se descargan. Íconos distintos por tipo (factura `FileText`, nota de crédito `FileMinus`), sin textos como "NC".
+- Confirmaciones de acciones irreversibles con `AlertDialog`, explicando la consecuencia (y pidiendo motivo cuando corresponda).
 
 ### Al crear o modificar pantallas
 1. Componentes de `src/components/ui/` (shadcn) + tokens de color; nada de hex ni colores fijos de Tailwind en las páginas.
 2. Mantener todo cuadrado, plano y con bordes finos; el dorado es solo acento.
 3. Textos de la interfaz en español.
+4. Listados nuevos: seguir el patrón de "Pantallas de listado" (filtros + Buscar + badges, tabla ordenable, acciones con íconos, ojo → panel lateral).
