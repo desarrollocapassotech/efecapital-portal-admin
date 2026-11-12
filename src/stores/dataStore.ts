@@ -27,6 +27,7 @@ import {
   Notification,
   Plan,
   Servicio,
+  Suscripcion,
 } from '@/types';
 import { notificationService } from '@/lib/notifications';
 import { conNuevoMonto, suscripcionDesdeDatos } from '@/lib/suscripciones';
@@ -123,6 +124,8 @@ interface DataStore {
   deletePlan: (id: string) => Promise<void>;
   /** Cambia el precio del plan y, a los clientes indicados, les aplica el nuevo monto desde el mes en curso. */
   actualizarPrecioPlan: (planId: string, precio: number, clientIds: string[]) => Promise<void>;
+  /** Guarda la suscripción de varios clientes en un solo batch (asignación masiva de plan). */
+  guardarSuscripciones: (cambios: { clientId: string; suscripcion: Suscripcion }[]) => Promise<void>;
 
   addServicio: (servicio: Omit<Servicio, 'id'>) => Promise<void>;
   updateServicio: (id: string, servicio: Omit<Servicio, 'id'>) => Promise<void>;
@@ -130,7 +133,13 @@ interface DataStore {
 
   addClient: (client: Omit<Client, 'id' | 'createdAt'>) => Promise<void>;
   updateClient: (id: string, updates: Partial<Client>) => Promise<void>;
-  deleteClient: (id: string) => Promise<void>;
+  /**
+   * Baja lógica (los clientes no se eliminan): marca `deshabilitadoEn` y, si se indica `suscripcionHasta`,
+   * da de baja la suscripción con ese último mes facturado. No borra mensajes, documentos ni actividades.
+   */
+  deshabilitarCliente: (id: string, opciones: { motivo?: string; suscripcionHasta?: string | null }) => Promise<void>;
+  /** Vuelve a habilitar un cliente. La suscripción no se reactiva sola: se edita desde la columna Plan. */
+  habilitarCliente: (id: string) => Promise<void>;
 
   addMessage: (message: Omit<Message, 'id'>) => Promise<void>;
   updateMessageStatus: (id: string, status: Message['status']) => Promise<void>;
@@ -241,6 +250,8 @@ export const useDataStore = create<DataStore>((set, get) => {
               notes: normalizeNotes(data.notes),
               lastContact,
               createdAt,
+              deshabilitadoEn: data.deshabilitadoEn ? toDate(data.deshabilitadoEn) : null,
+              motivoDeshabilitacion: typeof data.motivoDeshabilitacion === 'string' ? data.motivoDeshabilitacion : undefined,
             } satisfies Client;
           });
 
@@ -556,6 +567,12 @@ export const useDataStore = create<DataStore>((set, get) => {
       await batch.commit();
     },
 
+    guardarSuscripciones: async (cambios) => {
+      const batch = writeBatch(db);
+      cambios.forEach(({ clientId, suscripcion }) => batch.update(doc(db, 'clients', clientId), { suscripcion }));
+      await batch.commit();
+    },
+
     addServicio: async ({ nombre, precio }) => {
       await addDoc(collection(db, 'servicios'), { nombre: nombre.trim(), precio });
     },
@@ -638,37 +655,31 @@ export const useDataStore = create<DataStore>((set, get) => {
       await updateDoc(clientRef, payload);
     },
 
-    deleteClient: async (id) => {
-      await deleteDoc(doc(db, 'clients', id));
+    deshabilitarCliente: async (id, { motivo, suscripcionHasta }) => {
+      const motivoLimpio = motivo?.trim() || null;
+      await updateDoc(doc(db, 'clients', id), {
+        deshabilitadoEn: serverTimestamp(),
+        motivoDeshabilitacion: motivoLimpio,
+        ...(suscripcionHasta ? { 'suscripcion.hasta': suscripcionHasta } : {}),
+      });
+      get().addActivity({
+        clientId: id,
+        type: 'nota',
+        title: 'Cliente deshabilitado',
+        description: motivoLimpio ?? 'Sin motivo indicado',
+        timestamp: new Date(),
+      });
+    },
 
-      const messagesQuery = query(
-        collection(db, 'messages'),
-        where('clientId', '==', id)
-      );
-      const messagesSnapshot = await getDocs(messagesQuery);
-
-      if (!messagesSnapshot.empty) {
-        const batch = writeBatch(db);
-        messagesSnapshot.forEach((messageDoc) => batch.delete(messageDoc.ref));
-        await batch.commit();
-      }
-
-      set((state) => ({
-        activities: state.activities.filter((activity) => activity.clientId !== id),
-        documents: state.documents
-          .map((document) => {
-            if (!document.clientIds.includes(id)) {
-              return document;
-            }
-
-            const updatedClientIds = document.clientIds.filter((clientId) => clientId !== id);
-            return { ...document, clientIds: updatedClientIds };
-          })
-          .filter((document) => document.visibility === 'all' || document.clientIds.length > 0),
-        notifications: state.notifications.filter(
-          (notification) => notification.clientId !== id
-        ),
-      }));
+    habilitarCliente: async (id) => {
+      await updateDoc(doc(db, 'clients', id), { deshabilitadoEn: null, motivoDeshabilitacion: null });
+      get().addActivity({
+        clientId: id,
+        type: 'nota',
+        title: 'Cliente habilitado',
+        description: 'Se volvió a habilitar el cliente',
+        timestamp: new Date(),
+      });
     },
 
     addMessage: async (messageData) => {

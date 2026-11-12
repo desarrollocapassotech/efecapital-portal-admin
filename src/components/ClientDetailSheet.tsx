@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmailLink, WhatsAppLink } from '@/components/ContactLinks';
 import { CONDICIONES_IVA, formatoMoneda } from '@/lib/faktia';
+import { PerfilBadge } from '@/components/PerfilBadge';
 import { estaAtrasado, etiquetaPeriodo, montoActual } from '@/lib/suscripciones';
 import { useDataStore } from '@/stores/dataStore';
 
@@ -29,19 +30,6 @@ const Dato = ({ label, children }: { label: string; children: ReactNode }) => (
 const fecha = (valor: unknown, patron = 'dd/MM/yyyy') => {
   const d = valor instanceof Date ? valor : new Date(valor as string);
   return Number.isNaN(d.getTime()) ? '—' : format(d, patron, { locale: es });
-};
-
-const colorPerfil = (perfil: string) => {
-  switch (perfil?.toLowerCase()) {
-    case 'conservador':
-      return 'bg-primary/10 text-primary border-primary/20';
-    case 'moderado':
-      return 'bg-gold/10 text-gold border-gold/30';
-    case 'agresivo':
-      return 'bg-destructive/10 text-destructive border-destructive/20';
-    default:
-      return 'bg-muted text-muted-foreground border-border';
-  }
 };
 
 const MAX_NOTAS = 3;
@@ -65,16 +53,27 @@ export const ClientDetailSheet = ({
         {c && (
           <div className="space-y-5">
             <SheetHeader className="space-y-2 text-left">
-              <div>
-                <Badge variant="outline" className={colorPerfil(c.investorProfile)}>
-                  {c.investorProfile}
-                </Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <PerfilBadge perfil={c.investorProfile} />
+                {c.deshabilitadoEn && (
+                  <Badge variant="outline" className="border-destructive/20 bg-destructive/10 text-destructive">
+                    Deshabilitado
+                  </Badge>
+                )}
               </div>
               <SheetTitle className="font-display text-xl">
                 {c.firstName} {c.lastName}
               </SheetTitle>
               <SheetDescription>Cliente desde el {fecha(c.createdAt)}</SheetDescription>
             </SheetHeader>
+
+            {c.deshabilitadoEn && (
+              <div className="border-l-2 border-destructive bg-destructive/10 p-3 text-sm text-foreground">
+                Deshabilitado el {fecha(c.deshabilitadoEn)}
+                {c.motivoDeshabilitacion ? ` · ${c.motivoDeshabilitacion}` : ''}. Sus datos se conservan; se puede volver a
+                habilitar desde Acciones en el listado.
+              </div>
+            )}
 
             <Seccion titulo="Contacto">
               <dl className="space-y-2">

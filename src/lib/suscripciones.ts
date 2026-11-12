@@ -84,6 +84,36 @@ export const estaAtrasado = (s: Suscripcion | undefined, planes: Plan[]): boolea
   return Boolean(plan && monto !== undefined && monto < plan.precio);
 };
 
+/**
+ * Último mes a facturar si el cliente se da de baja hoy: el mes vencido (que todavía se factura), o el mes
+ * de alta si empezó después (el alta se cobra completa). `null` si ya no hay nada que cambiar.
+ */
+export const periodoBajaHoy = (s: Suscripcion | undefined): Periodo | null => {
+  if (!s) return null;
+  const vencido = periodoAFacturar();
+  const hasta = s.desde > vencido ? s.desde : vencido;
+  return s.hasta && s.hasta <= hasta ? null : hasta;
+};
+
+/** Se le puede asignar un plan sin tocar meses ya cerrados: sin suscripción o con una activa. */
+export const puedeAsignarPlan = (s: Suscripcion | undefined): boolean => !s || suscripcionActiva(s);
+
+/**
+ * Suscripción con el plan asignado.
+ * - Sin suscripción: alta en el mes en curso, al precio del plan.
+ * - Con suscripción activa: cambia el plan; si `aplicarPrecio`, el precio del plan rige desde el mes en curso
+ *   (o desde el alta, si todavía no empezó), así la factura del mes anterior sale con el monto viejo.
+ */
+export const conPlan = (s: Suscripcion | undefined, plan: Plan, aplicarPrecio: boolean): Suscripcion => {
+  const actual = periodoActual();
+  if (!s) return { planId: plan.id, desde: actual, hasta: null, historial: [{ monto: plan.precio, desde: actual }] };
+  const historial =
+    aplicarPrecio && montoActual(s) !== plan.precio
+      ? conNuevoMonto(s.historial, plan.precio, s.desde > actual ? s.desde : actual)
+      : s.historial;
+  return { ...s, planId: plan.id, historial };
+};
+
 /** Lee la suscripción de Firestore tolerando datos incompletos. */
 export const suscripcionDesdeDatos = (raw: unknown): Suscripcion | undefined => {
   if (!raw || typeof raw !== 'object') return undefined;

@@ -1,8 +1,12 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Plus, Search, Edit, Trash2, MessageCircle, Eye, ArrowUp, ArrowDown, ArrowUpDown, X } from 'lucide-react';
+import { Plus, Search, Edit, MessageCircle, Eye, ArrowUp, ArrowDown, ArrowUpDown, UserCheck, UserX, X } from 'lucide-react';
+import { SuscripcionIcon } from '@/components/icons/SuscripcionIcon';
 import { Label } from '@/components/ui/label';
-import type { Client } from '@/types';
+import type { Client, Plan } from '@/types';
+import { formatoMoneda } from '@/lib/faktia';
+import { PerfilBadge } from '@/components/PerfilBadge';
+import { estaAtrasado, montoActual, suscripcionActiva } from '@/lib/suscripciones';
 import { useDataStore } from '@/stores/dataStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,20 +19,12 @@ import {
   TableHeader,
   TableRow
 } from '@/components/ui/table';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { useShowPreviewModules } from '@/stores/previewStore';
-import { EmailLink, WhatsAppLink } from '@/components/ContactLinks';
+import { EstadoClienteDialog } from '@/components/EstadoClienteDialog';
+import { clienteHabilitado } from '@/lib/clientes';
+import { ContactButtons } from '@/components/ContactLinks';
 import { ClientDetailSheet } from '@/components/ClientDetailSheet';
+import { SuscripcionDialog } from '@/components/SuscripcionDialog';
 import { ClientCombobox } from '@/components/ClientCombobox';
 import { PageHeader } from '@/components/PageHeader';
 import { buildBrokerOptions, formatBrokers, sameBroker } from '@/lib/brokers';
@@ -57,9 +53,16 @@ const BrokerTags = ({ brokers }: { brokers: string[] }) =>
 
 const ALL = '__all__';
 
-type Filters = { clientId: string; profile: string; broker: string };
+type Filters = { clientId: string; profile: string; broker: string; estado: string };
 
-const EMPTY_FILTERS: Filters = { clientId: '', profile: ALL, broker: ALL };
+// Por defecto solo los habilitados; los deshabilitados (baja lógica) se ven filtrando por estado
+const EMPTY_FILTERS: Filters = { clientId: '', profile: ALL, broker: ALL, estado: 'habilitados' };
+
+const ESTADO_OPTIONS = [
+  { value: 'habilitados', label: 'Habilitados' },
+  { value: 'deshabilitados', label: 'Deshabilitados' },
+  { value: ALL, label: 'Todos' },
+];
 
 const PROFILE_OPTIONS = [
   { value: 'conservador', label: 'Conservador' },
@@ -68,7 +71,7 @@ const PROFILE_OPTIONS = [
 ];
 
 
-type SortKey = 'name' | 'profile' | 'broker' | 'createdAt';
+type SortKey = 'name' | 'profile' | 'broker' | 'plan' | 'createdAt';
 type SortDirection = 'asc' | 'desc';
 
 const SORT_LABELS: Record<SortKey, string> = {
@@ -76,6 +79,50 @@ const SORT_LABELS: Record<SortKey, string> = {
   name: 'Cliente',
   profile: 'Perfil',
   broker: 'Broker',
+  plan: 'Plan',
+};
+
+/** Texto de la columna Plan: nombre del plan, "Monto propio" si factura sin plan, o vacío si no tiene suscripción. */
+const textoPlan = (client: Client, planes: Plan[]) => {
+  const s = client.suscripcion;
+  if (!s) return '';
+  return planes.find((p) => p.id === s.planId)?.nombre ?? 'Monto propio';
+};
+
+const Etiqueta = ({ children, className, title }: { children: ReactNode; className: string; title?: string }) => (
+  <span className={`border px-1.5 py-px text-[10px] font-semibold uppercase tracking-wider ${className}`} title={title}>
+    {children}
+  </span>
+);
+
+/**
+ * Plan del cliente como botón de ícono (mismo estilo que Acciones), clickeable para cambiarlo.
+ * Con suscripción: ícono en verde sutil (`success`) y el plan + monto en el tooltip. Sin suscripción: ícono atenuado con borde punteado.
+ * Marcas "Atrasado" (paga menos que el plan) o "Baja" en la misma línea.
+ */
+const PlanCell = ({ client, planes, onClick }: { client: Client; planes: Plan[]; onClick: () => void }) => {
+  const s = client.suscripcion;
+  const nombre = `${client.firstName} ${client.lastName}`;
+  const tooltip = s ? `${textoPlan(client, planes)} · ${formatoMoneda(montoActual(s) ?? 0)} por mes` : 'Sin plan: clic para asignar';
+  return (
+    <span className="inline-flex items-center gap-2 whitespace-nowrap">
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={onClick}
+        className={s ? 'border-success/30 bg-success/10 text-success hover:bg-success/15 hover:text-success' : 'border-dashed text-muted-foreground'}
+        title={tooltip}
+        aria-label={s ? `Plan de ${nombre}: ${tooltip}. Cambiar` : `Asignar plan a ${nombre}`}
+      >
+        <SuscripcionIcon className="h-4 w-4" />
+      </Button>
+      {s && !suscripcionActiva(s) ? (
+        <Etiqueta className="border-border bg-muted text-muted-foreground">Baja</Etiqueta>
+      ) : (
+        estaAtrasado(s, planes) && <Etiqueta className="border-gold/30 bg-gold/10 text-gold">Atrasado</Etiqueta>
+      )}
+    </span>
+  );
 };
 
 // Perfil se ordena por nivel de riesgo, no alfabéticamente
@@ -90,7 +137,7 @@ const toTime = (value: unknown) => {
   return Number.isNaN(time) ? 0 : time;
 };
 
-const compareClients = (a: Client, b: Client, key: SortKey) => {
+const compareClients = (a: Client, b: Client, key: SortKey, planes: Plan[]) => {
   switch (key) {
     case 'profile':
       return (
@@ -101,6 +148,12 @@ const compareClients = (a: Client, b: Client, key: SortKey) => {
       return collator.compare(formatBrokers(a.brokers), formatBrokers(b.brokers));
     case 'createdAt':
       return toTime(a.createdAt) - toTime(b.createdAt);
+    case 'plan': {
+      // Los que no tienen suscripción quedan al final en orden ascendente
+      const pa = textoPlan(a, planes);
+      const pb = textoPlan(b, planes);
+      return pa && pb ? collator.compare(pa, pb) : Number(!pa) - Number(!pb);
+    }
     default:
       return collator.compare(fullName(a), fullName(b));
   }
@@ -145,10 +198,14 @@ const SortableHead = ({
 
 export const Clients = () => {
   const navigate = useNavigate();
-  const { clients, brokers, deleteClient, messages, documents } = useDataStore();
+  const { clients, brokers, planes, messages, documents } = useDataStore();
   const showPreviewModules = useShowPreviewModules();
   // Cliente abierto en el panel de detalle
   const [detalle, setDetalle] = useState<Client | null>(null);
+  // Cliente con el diálogo de suscripción abierto (clic en la columna Plan)
+  const [suscripcionDe, setSuscripcionDe] = useState<Client | null>(null);
+  // Cliente con la confirmación de deshabilitar / habilitar abierta
+  const [estadoDe, setEstadoDe] = useState<Client | null>(null);
 
   // Filtros: `draft` es lo que se edita en el formulario; `applied` se usa al filtrar (se actualiza con "Buscar")
   const [draftFilters, setDraftFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -190,6 +247,11 @@ export const Clients = () => {
         value: PROFILE_OPTIONS.find((p) => p.value === appliedFilters.profile)?.label ?? appliedFilters.profile,
       },
       appliedFilters.broker !== ALL && { key: 'broker', label: 'Broker', value: appliedFilters.broker },
+      appliedFilters.estado !== EMPTY_FILTERS.estado && {
+        key: 'estado',
+        label: 'Estado',
+        value: ESTADO_OPTIONS.find((o) => o.value === appliedFilters.estado)?.label ?? appliedFilters.estado,
+      },
     ] as const
   ).filter(Boolean) as { key: keyof Filters; label: string; value: string }[];
 
@@ -215,6 +277,8 @@ export const Clients = () => {
       if (appliedFilters.broker !== ALL && !client.brokers.some((b) => sameBroker(b, appliedFilters.broker))) {
         return false;
       }
+      if (appliedFilters.estado === 'habilitados' && !clienteHabilitado(client)) return false;
+      if (appliedFilters.estado === 'deshabilitados' && clienteHabilitado(client)) return false;
       return true;
     });
   }, [clients, appliedFilters]);
@@ -237,29 +301,43 @@ export const Clients = () => {
     const factor = sortDirection === 'asc' ? 1 : -1;
     return [...filteredClients].sort(
       (a, b) =>
-        compareClients(a, b, sortKey) * factor ||
+        compareClients(a, b, sortKey, planes) * factor ||
         // desempate siempre alfabético por nombre
         collator.compare(fullName(a), fullName(b))
     );
-  }, [filteredClients, sortKey, sortDirection]);
+  }, [filteredClients, sortKey, sortDirection, planes]);
 
-  const handleDeleteClient = async (clientId: string) => {
-    try {
-      await deleteClient(clientId);
-    } catch (error) {
-      console.error('Error al eliminar cliente', error);
-    }
+  /** Último botón de Acciones: deshabilitar (rojo) o, si ya está deshabilitado, volver a habilitar. */
+  const botonEstado = (client: Client) => {
+    const nombre = fullName(client);
+    return clienteHabilitado(client) ? (
+      <Button
+        variant="outline"
+        size="sm"
+        className="text-destructive hover:text-destructive"
+        onClick={() => setEstadoDe(client)}
+        title="Deshabilitar"
+        aria-label={`Deshabilitar a ${nombre}`}
+      >
+        <UserX className="h-4 w-4" />
+      </Button>
+    ) : (
+      <Button variant="outline" size="sm" onClick={() => setEstadoDe(client)} title="Volver a habilitar" aria-label={`Volver a habilitar a ${nombre}`}>
+        <UserCheck className="h-4 w-4" />
+      </Button>
+    );
   };
 
-  const getProfileColor = (profile: string) => {
-    // El formulario guarda el perfil en minúsculas; comparar sin distinguir mayúsculas
-    switch (profile?.toLowerCase()) {
-      case 'conservador': return 'bg-primary/10 text-primary border-primary/20';
-      case 'moderado': return 'bg-gold/10 text-gold border-gold/30';
-      case 'agresivo': return 'bg-destructive/10 text-destructive border-destructive/20';
-      default: return 'bg-muted text-muted-foreground border-border';
-    }
-  };
+  /** Marca secundaria en la misma línea del nombre. */
+  const marcaDeshabilitado = (client: Client) =>
+    !clienteHabilitado(client) && (
+      <Etiqueta
+        className="border-destructive/20 bg-destructive/10 text-destructive"
+        title={client.motivoDeshabilitacion ? `Motivo: ${client.motivoDeshabilitacion}` : undefined}
+      >
+        Deshabilitado
+      </Etiqueta>
+    );
 
   const getClientStats = (clientId: string) => {
     const clientMessages = messages.filter(m => m.clientId === clientId);
@@ -296,7 +374,7 @@ export const Clients = () => {
         <CardContent className="pt-4 sm:pt-6">
           <form
             onSubmit={handleSearch}
-            className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end"
+            className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-end"
           >
             <div className="space-y-1.5 sm:col-span-2 lg:col-span-1">
               <Label htmlFor="filter-client" className="eyebrow">Cliente</Label>
@@ -342,6 +420,25 @@ export const Clients = () => {
                   {brokerOptions.map((broker) => (
                     <SelectItem key={broker} value={broker}>
                       {broker}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="filter-estado" className="eyebrow">Estado</Label>
+              <Select
+                value={draftFilters.estado}
+                onValueChange={(value) => setDraftFilters((prev) => ({ ...prev, estado: value }))}
+              >
+                <SelectTrigger id="filter-estado" className="text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ESTADO_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -399,7 +496,11 @@ export const Clients = () => {
         <CardContent>
           {filteredClients.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              {activeFilters.length > 0 ? 'No se encontraron clientes con estos filtros' : 'No hay clientes registrados'}
+              {activeFilters.length > 0
+                ? 'No se encontraron clientes con estos filtros'
+                : clients.length > 0
+                  ? 'No hay clientes habilitados'
+                  : 'No hay clientes registrados'}
             </div>
           ) : isMobile ? (
             // Vista en tarjetas para móviles
@@ -436,25 +537,29 @@ export const Clients = () => {
                 return (
                   <Card key={client.id} className="overflow-hidden shadow-sm">
                     <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between">
-                        <div className="font-medium">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2 font-medium">
                           {client.firstName} {client.lastName}
+                          {marcaDeshabilitado(client)}
                         </div>
-                        <Badge variant="outline" className={getProfileColor(client.investorProfile)}>
-                          {client.investorProfile}
-                        </Badge>
+                        <PerfilBadge perfil={client.investorProfile} />
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-2 text-sm">
-                      <div className="flex min-w-0 items-center gap-1">
-                        <strong>Email:</strong> <EmailLink email={client.email} />
-                      </div>
-                      <div className="flex min-w-0 items-center gap-1">
-                        <strong>Teléfono:</strong> <WhatsAppLink telefono={client.phone} />
+                      <div className="flex items-center gap-2">
+                        <strong>Contacto:</strong>
+                        <ContactButtons
+                          email={client.email}
+                          telefono={client.phone}
+                          nombre={`${client.firstName} ${client.lastName}`}
+                        />
                       </div>
                       <div className="flex flex-wrap items-center gap-1">
                         <strong>{client.brokers.length > 1 ? 'Brokers:' : 'Broker:'}</strong>
                         <BrokerTags brokers={client.brokers} />
+                      </div>
+                      <div className="flex flex-wrap items-center gap-1">
+                        <strong>Plan:</strong> <PlanCell client={client} planes={planes} onClick={() => setSuscripcionDe(client)} />
                       </div>
                       <div><strong>Alta:</strong> {formatCreatedAt(client.createdAt)}</div>
 
@@ -489,31 +594,7 @@ export const Clients = () => {
                         >
                           <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
                         </Button>
-                        <AlertDialog>
-                          <AlertDialogTrigger asChild>
-                            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>¿Eliminar cliente?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Esta acción no se puede deshacer. Se eliminarán todos los datos
-                                del cliente incluyendo mensajes, documentos y actividades.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={() => handleDeleteClient(client.id)}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                              >
-                                Eliminar
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
+                        {botonEstado(client)}
                       </div>
                     </CardContent>
                   </Card>
@@ -528,9 +609,10 @@ export const Clients = () => {
                   <TableRow>
                     <SortableHead label="Fecha de alta" sortKey="createdAt" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
                     <SortableHead label="Cliente" sortKey="name" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
-                    <TableHead>Contacto</TableHead>
                     <SortableHead label="Perfil" sortKey="profile" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
                     <SortableHead label="Broker" sortKey="broker" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
+                    <SortableHead label="Plan" sortKey="plan" activeKey={sortKey} direction={sortDirection} onSort={handleSort} />
+                    <TableHead>Contacto</TableHead>
                     <TableHead className="text-center">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -544,26 +626,26 @@ export const Clients = () => {
                           {formatCreatedAt(client.createdAt)}
                         </TableCell>
                         <TableCell>
-                          <div className="font-medium">
+                          <div className="flex items-center gap-2 font-medium">
                             {client.firstName} {client.lastName}
+                            {marcaDeshabilitado(client)}
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col">
-                            <EmailLink email={client.email} className="text-sm" />
-                            <WhatsAppLink telefono={client.phone} className="text-sm text-muted-foreground" />
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={getProfileColor(client.investorProfile)}
-                          >
-                            {client.investorProfile}
-                          </Badge>
+                          <PerfilBadge perfil={client.investorProfile} />
                         </TableCell>
                         <TableCell className="text-sm">
                           <BrokerTags brokers={client.brokers} />
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          <PlanCell client={client} planes={planes} onClick={() => setSuscripcionDe(client)} />
+                        </TableCell>
+                        <TableCell>
+                          <ContactButtons
+                            email={client.email}
+                            telefono={client.phone}
+                            nombre={`${client.firstName} ${client.lastName}`}
+                          />
                         </TableCell>
 
                         <TableCell className="text-right">
@@ -595,31 +677,7 @@ export const Clients = () => {
                             >
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>¿Eliminar cliente?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Esta acción no se puede deshacer. Se eliminarán todos los datos
-                                    del cliente incluyendo mensajes, documentos y actividades.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                  <AlertDialogAction
-                                    onClick={() => handleDeleteClient(client.id)}
-                                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                  >
-                                    Eliminar
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
+                            {botonEstado(client)}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -632,6 +690,8 @@ export const Clients = () => {
         </CardContent>
       </Card>
       <ClientDetailSheet client={detalle} onOpenChange={(open) => !open && setDetalle(null)} />
+      <SuscripcionDialog client={suscripcionDe} onOpenChange={(open) => !open && setSuscripcionDe(null)} />
+      <EstadoClienteDialog client={estadoDe} onOpenChange={(open) => !open && setEstadoDe(null)} />
     </div>
   );
 };

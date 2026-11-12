@@ -16,6 +16,12 @@ export interface Client {
   notes?: Note[];
   lastContact: Date;
   createdAt: Date;
+  /**
+   * Baja lógica: los clientes no se eliminan, se deshabilitan y conservan todos sus datos
+   * (facturas, mensajes, documentos, actividades). Sin valor = habilitado. Ver src/lib/clientes.ts
+   */
+  deshabilitadoEn?: Date | null;
+  motivoDeshabilitacion?: string;
 }
 
 /** Período mensual "YYYY-MM". */

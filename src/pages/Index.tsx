@@ -6,7 +6,6 @@ import {
   Building2,
   CalendarCheck,
   CheckCircle2,
-  Layers,
   Loader2,
   Users,
   Wallet,
@@ -18,6 +17,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { faktiaConfigurado, formatoMoneda, referenciaBroker, type FaktiaComprobante } from '@/lib/faktia';
 import { etiquetaPeriodo, montoActual, montoEn, periodoAFacturar, suscripcionActiva } from '@/lib/suscripciones';
+import { clienteHabilitado } from '@/lib/clientes';
+import { SuscripcionIcon } from '@/components/icons/SuscripcionIcon';
 import { netoDe, useFacturacionPeriodo } from '@/hooks/useFacturacionPeriodo';
 
 /** Factura emitida o enviada a ARCA (lo que ya no hay que volver a emitir). */
@@ -82,7 +83,7 @@ const Index = () => {
   const totalComisiones = brokersFacturados.reduce((a, b) => a + netoDe(facturas.get(referenciaBroker(b.id))!), 0);
 
   // ── Cartera ──────────────────────────────────────────────────────────────
-  const activas = clients.filter((c) => c.suscripcion && suscripcionActiva(c.suscripcion));
+  const activas = clients.filter((c) => clienteHabilitado(c) && c.suscripcion && suscripcionActiva(c.suscripcion));
   const ingresoMensual = activas.reduce((a, c) => a + (montoActual(c.suscripcion!) ?? 0), 0);
 
   const pendientes = [
@@ -193,13 +194,13 @@ const Index = () => {
               to="/clients"
               label="Clientes"
               icon={Users}
-              value={clients.length}
+              value={clients.filter(clienteHabilitado).length}
               caption={`${activas.length} con suscripción activa`}
             />
             <Tile
               to="/plans"
               label="Ingreso mensual"
-              icon={Layers}
+              icon={SuscripcionIcon}
               value={formatoMoneda(ingresoMensual).replace(/,\d{2}$/, '')}
               caption="Suma de suscripciones activas"
             />

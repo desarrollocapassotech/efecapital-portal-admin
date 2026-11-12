@@ -10,9 +10,9 @@ import {
   FlaskConical,
   Receipt,
   Building2,
-  Layers,
   Package,
 } from 'lucide-react';
+import { SuscripcionIcon } from '@/components/icons/SuscripcionIcon';
 import { useDataStore } from '@/stores/dataStore';
 import { usePreviewStore } from '@/stores/previewStore';
 import { UserMenu } from '@/components/UserMenu';
@@ -24,7 +24,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Clientes', href: '/clients', icon: Users },
   { name: 'Brokers', href: '/brokers', icon: Building2 },
-  { name: 'Planes', href: '/plans', icon: Layers },
+  { name: 'Planes', href: '/plans', icon: SuscripcionIcon },
   { name: 'Servicios', href: '/services', icon: Package },
   { name: 'Facturas', href: '/invoices', icon: Receipt },
   { name: 'Mensajes', href: '/messages', icon: MessageCircle, preview: true },

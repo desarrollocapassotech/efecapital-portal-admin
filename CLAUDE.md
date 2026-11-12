@@ -27,11 +27,19 @@ Pantalla `/invoices/monthly` (`src/pages/Billing.tsx`), subpantalla de Facturas 
 Suscripción del cliente (`client.suscripcion`, lógica en `src/lib/suscripciones.ts`, se edita en `ClientForm` con `SuscripcionFields`):
 - `desde` = mes de alta (se cobra completo), `hasta` = último mes facturado (baja), `planId` opcional.
 - `historial` de montos con vigencia `desde`. **Cada cliente tiene su propio monto** (los viejos pueden quedar atrasados respecto del plan). Un cambio rige desde el mes en curso, así la factura del mes anterior sale con el monto viejo. La opción "Es una corrección" reemplaza todo el historial.
+- Atajos para asignar plan: en Clientes, la columna **Plan** es un botón de ícono (`SuscripcionIcon` de `src/components/icons/`, flecha circular con signo pesos = pago periódico, el mismo ícono de Planes en todo el admin; `RefreshCw` queda solo para "Actualizar"; verde sutil `success` si tiene suscripción, punteado si no; plan y monto en el tooltip) que abre `SuscripcionDialog` (los mismos `SuscripcionFields` del formulario); en `/plans`, el botón "Asignar clientes" (`UserPlus`) asigna un plan a varios a la vez (`conPlan` en `suscripciones.ts`, `guardarSuscripciones` en el store). Los que no tienen suscripción se dan de alta en el mes en curso al precio del plan; a los que ya tienen, opcionalmente se les aplica el precio desde el mes en curso. Las bajas no se ofrecen.
 - Planes (`planes` en Firestore: `nombre`, `precio`) en `/plans`. "Actualizar precio" cambia el precio del plan y lo aplica solo a los clientes tildados: por defecto, los que pagaban el precio vigente; los atrasados quedan como están.
 
 Servicios de pago único (`servicios` en Firestore: `nombre`, `precio`): ABM en `/services` (`Services.tsx`, alta y edición en diálogo). No entran en la facturación mensual. Se eligen en "Nueva factura" con "Agregar servicio…", que completa la línea con el nombre y el precio. Cargados al 2026-11-12: plan mensual "Asesoramiento con seguimiento" $14.900; servicios "Tu primera inversión" $79.900, "Asesoramiento por única vez" $79.900 y "Diagnóstico inicial (asesoramiento con seguimiento)" $34.900.
 
 Receptores en Faktia: clientes con `referenciaExterna` = id del cliente; brokers con `broker:<id>` (`faktia.asegurarReceptor`).
+
+## Clientes: baja lógica
+
+Los clientes **nunca se eliminan** de Firestore: se deshabilitan (`deshabilitadoEn` + `motivoDeshabilitacion` opcional) y conservan facturas, mensajes, documentos y actividades. Store: `deshabilitarCliente` / `habilitarCliente` (no existe `deleteClient`). Helper `clienteHabilitado` en `src/lib/clientes.ts`.
+- En Clientes, el último botón de Acciones es "Deshabilitar" (`UserX`, rojo) o "Volver a habilitar" (`UserCheck`) en `EstadoClienteDialog`. El listado muestra por defecto solo habilitados (filtro **Estado**); los deshabilitados llevan la marca "Deshabilitado" junto al nombre.
+- Al deshabilitar se ofrece dar de baja la suscripción con `hasta` = mes vencido (o el mes de alta si es posterior), `periodoBajaHoy`. Habilitar no reactiva la suscripción.
+- Se excluyen de "Nueva factura", asignación y precio de planes y la cartera del Dashboard. Los filtros de historial (Facturas) siguen mostrándolos. Toda pantalla nueva que ofrezca clientes para operar tiene que filtrar con `clienteHabilitado`.
 
 ## Brokers
 
@@ -66,7 +74,7 @@ Todos están definidos como tokens HSL en `src/index.css` y expuestos en `tailwi
 | `destructive`, `success`, `warning` | Estados, en tonos apagados |
 
 - Barra dorada del logo: clase `.brand-bar` (degradé `#FADC5C → #9E7C00`). Se usa como línea fina (2–3px) debajo de la marca, arriba de tarjetas de login/404 y en el hover de las tarjetas.
-- Perfil de inversor: Conservador → `primary`, Moderado → `gold`, Agresivo → `destructive`, otro → `muted` (siempre en versión `/10` de fondo + texto del color).
+- Perfil de inversor: Conservador → `success`, Moderado → `gold`, Agresivo → `destructive`, otro → `muted` (siempre en versión `/10` de fondo + texto del color). Mostrarlo siempre con `PerfilBadge` (`src/components/PerfilBadge.tsx`: ancho fijo `w-28`, centrado; colores de `colorPerfil` en `src/lib/perfiles.ts`).
 - Avisos: `border-l-2` del color + fondo `/10` + `text-foreground` (ej. `border-l-2 border-gold bg-gold/10`).
 
 ### Formas
@@ -106,6 +114,7 @@ Referencias: `src/pages/Clients.tsx` y `src/pages/Invoices.tsx`. Toda pantalla n
 
 ### Datos de contacto y documentos
 - Email → ícono de sobre que abre `mailto:`; teléfono → ícono de WhatsApp que abre `wa.me` en pestaña nueva (`EmailLink` / `WhatsAppLink` en `src/components/ContactLinks.tsx`; normaliza números argentinos a `549…`).
+- En listados (tabla y tarjetas móviles) no se muestran email ni teléfono: solo `ContactButtons` (dos botones de ícono `outline sm`, como los de Acciones; deshabilitados si falta el dato, con el dato en el tooltip).
 - Comprobantes y PDFs **se abren en una pestaña nueva**, no se descargan. Íconos distintos por tipo (factura `FileText`, nota de crédito `FileMinus`), sin textos como "NC".
 - Confirmaciones de acciones irreversibles con `AlertDialog`, explicando la consecuencia (y pidiendo motivo cuando corresponda).
 

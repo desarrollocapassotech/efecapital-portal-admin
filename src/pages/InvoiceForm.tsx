@@ -38,6 +38,7 @@ import {
 } from '@/lib/faktia';
 import { INVOICES_QUERY_KEY } from '@/pages/Invoices';
 import { montoAInput } from '@/lib/suscripciones';
+import { clienteHabilitado } from '@/lib/clientes';
 
 type Linea = { descripcion: string; cantidad: string; unidad: UnidadItem; precioUnitario: string; alicuotaIva: string };
 
@@ -94,6 +95,8 @@ export const InvoiceForm = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { clients, servicios } = useDataStore();
+  // A los clientes deshabilitados (baja lógica) no se les emiten facturas nuevas
+  const habilitados = useMemo(() => clients.filter(clienteHabilitado), [clients]);
 
   const { data: config, isLoading: cargandoConfig, error: errorConfig } = useQuery({
     queryKey: ['faktia', 'configuracion'],
@@ -282,7 +285,7 @@ export const InvoiceForm = () => {
                 <Label htmlFor="cliente">Cliente *</Label>
                 <ClientCombobox
                   id="cliente"
-                  clients={clients}
+                  clients={habilitados}
                   value={clientId}
                   onChange={setClientId}
                   allowAll={false}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowDown, ArrowUp, Edit, Eye, Layers, Loader2, Plus, Search, Trash2, TrendingUp, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Edit, Eye, Loader2, Plus, Search, Trash2, TrendingUp, UserPlus, X } from 'lucide-react';
+import { SuscripcionIcon } from '@/components/icons/SuscripcionIcon';
 import { toast } from 'sonner';
 import type { Client, Plan } from '@/types';
 import { useDataStore } from '@/stores/dataStore';
@@ -30,6 +31,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { formatoMoneda } from '@/lib/faktia';
+import { clienteHabilitado } from '@/lib/clientes';
 import {
   estaAtrasado,
   etiquetaPeriodo,
@@ -38,6 +40,8 @@ import {
   parsearMonto,
   periodoActual,
   suscripcionActiva,
+  conPlan,
+  puedeAsignarPlan,
 } from '@/lib/suscripciones';
 
 const collator = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
@@ -146,7 +150,7 @@ const PrecioDialog = ({ plan, onOpenChange }: { plan: Plan | null; onOpenChange:
     () =>
       plan
         ? clients
-            .filter((c) => c.suscripcion?.planId === plan.id && suscripcionActiva(c.suscripcion))
+            .filter((c) => clienteHabilitado(c) && c.suscripcion?.planId === plan.id && suscripcionActiva(c.suscripcion))
             .sort((a, b) => collator.compare(fullName(a), fullName(b)))
         : [],
     [clients, plan]
@@ -276,6 +280,158 @@ const PrecioDialog = ({ plan, onOpenChange }: { plan: Plan | null; onOpenChange:
   );
 };
 
+// ── Diálogo: asignar el plan a varios clientes ─────────────────────────────
+
+const AsignarDialog = ({ plan, onOpenChange }: { plan: Plan | null; onOpenChange: (o: boolean) => void }) => {
+  const { clients, planes, guardarSuscripciones } = useDataStore();
+  const [busqueda, setBusqueda] = useState('');
+  const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
+  const [aplicarPrecio, setAplicarPrecio] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+
+  // Candidatos: sin suscripción o con una activa en otro plan / sin plan. Las bajas no (tienen meses cerrados).
+  const candidatos = useMemo(
+    () =>
+      plan
+        ? clients
+            .filter((c) => clienteHabilitado(c) && puedeAsignarPlan(c.suscripcion) && c.suscripcion?.planId !== plan.id)
+            .sort((a, b) => collator.compare(fullName(a), fullName(b)))
+        : [],
+    [clients, plan]
+  );
+  const visibles = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
+    return q ? candidatos.filter((c) => fullName(c).toLowerCase().includes(q)) : candidatos;
+  }, [candidatos, busqueda]);
+
+  const [abiertoPara, setAbiertoPara] = useState<string | null>(null);
+  if ((plan?.id ?? null) !== abiertoPara) {
+    setAbiertoPara(plan?.id ?? null);
+    setBusqueda('');
+    setSeleccion(new Set());
+    setAplicarPrecio(true);
+  }
+
+  const alternar = (id: string, on: boolean) =>
+    setSeleccion((prev) => {
+      const s = new Set(prev);
+      if (on) s.add(id);
+      else s.delete(id);
+      return s;
+    });
+
+  const conSuscripcion = candidatos.filter((c) => seleccion.has(c.id) && c.suscripcion).length;
+  const nombrePlan = (id?: string | null) => planes.find((p) => p.id === id)?.nombre ?? 'Monto propio';
+
+  const guardar = async () => {
+    if (!plan || seleccion.size === 0) return;
+    setGuardando(true);
+    try {
+      await guardarSuscripciones(
+        candidatos
+          .filter((c) => seleccion.has(c.id))
+          .map((c) => ({ clientId: c.id, suscripcion: conPlan(c.suscripcion, plan, aplicarPrecio) }))
+      );
+      toast.success(`${seleccion.size === 1 ? '1 cliente asignado' : `${seleccion.size} clientes asignados`} a ${plan.nombre}`);
+      onOpenChange(false);
+    } catch {
+      toast.error('No se pudo asignar el plan');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  return (
+    <Dialog open={Boolean(plan)} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-xl">
+        {plan && (
+          <div className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>Asignar clientes · {plan.nombre}</DialogTitle>
+              <DialogDescription>
+                Precio del plan: {formatoMoneda(plan.precio)}. Los que no tienen suscripción se dan de alta en{' '}
+                {etiquetaPeriodo(periodoActual())} (se cobra completo) a ese precio.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="eyebrow">Clientes ({seleccion.size} de {candidatos.length})</span>
+                {visibles.length > 0 && (
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
+                    onClick={() => {
+                      const todos = visibles.every((c) => seleccion.has(c.id));
+                      setSeleccion((prev) => {
+                        const s = new Set(prev);
+                        visibles.forEach((c) => (todos ? s.delete(c.id) : s.add(c.id)));
+                        return s;
+                      });
+                    }}
+                  >
+                    {visibles.every((c) => seleccion.has(c.id)) ? 'Ninguno' : 'Todos'}
+                  </button>
+                )}
+              </div>
+              {candidatos.length > 6 && (
+                <Input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar cliente…" aria-label="Buscar cliente" />
+              )}
+              {candidatos.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Todos los clientes activos ya tienen este plan.</p>
+              ) : visibles.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Ningún cliente coincide con la búsqueda.</p>
+              ) : (
+                <ul className="max-h-72 divide-y divide-border overflow-y-auto border border-border">
+                  {visibles.map((c) => (
+                    <li key={c.id}>
+                      <label className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm hover:bg-secondary">
+                        <Checkbox checked={seleccion.has(c.id)} onCheckedChange={(v) => alternar(c.id, v === true)} />
+                        <span className="flex-1">{fullName(c)}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {c.suscripcion ? (
+                            <>
+                              {nombrePlan(c.suscripcion.planId)} ·{' '}
+                              <span className="tabular-nums">{formatoMoneda(montoActual(c.suscripcion) ?? 0)}</span>
+                            </>
+                          ) : (
+                            'Sin suscripción'
+                          )}
+                        </span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {conSuscripcion > 0 && (
+              <label className="flex cursor-pointer items-start gap-2 border-l-2 border-gold bg-gold/10 p-3 text-sm">
+                <Checkbox className="mt-0.5" checked={aplicarPrecio} onCheckedChange={(v) => setAplicarPrecio(v === true)} />
+                <span>
+                  Cobrarles {formatoMoneda(plan.precio)} desde {etiquetaPeriodo(periodoActual())} a los que ya tienen suscripción (
+                  {conSuscripcion}). La factura del mes anterior sale con su monto actual. Si lo destildás, cambia solo el plan y
+                  siguen con su monto.
+                </span>
+              </label>
+            )}
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+                Cancelar
+              </Button>
+              <Button type="button" onClick={guardar} disabled={guardando || seleccion.size === 0}>
+                {guardando && <Loader2 className="h-4 w-4 animate-spin" />}
+                Asignar{seleccion.size > 0 ? ` (${seleccion.size})` : ''}
+              </Button>
+            </DialogFooter>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+};
+
 // ── Página ─────────────────────────────────────────────────────────────────
 
 const ALL = '__all__';
@@ -293,13 +449,14 @@ export const Plans = () => {
 
   const [planDialog, setPlanDialog] = useState<{ open: boolean; plan: Plan | null }>({ open: false, plan: null });
   const [precioPlan, setPrecioPlan] = useState<Plan | null>(null);
+  const [asignarPlan, setAsignarPlan] = useState<Plan | null>(null);
   const [detalle, setDetalle] = useState<Client | null>(null);
 
   const suscriptos = useMemo(() => clients.filter((c) => c.suscripcion), [clients]);
   const nombrePlan = (id?: string | null) => planes.find((p) => p.id === id)?.nombre ?? 'Sin plan';
 
   const resumenPlan = (p: Plan) => {
-    const activos = suscriptos.filter((c) => c.suscripcion!.planId === p.id && suscripcionActiva(c.suscripcion));
+    const activos = suscriptos.filter((c) => clienteHabilitado(c) && c.suscripcion!.planId === p.id && suscripcionActiva(c.suscripcion));
     const atrasados = activos.filter((c) => estaAtrasado(c.suscripcion, planes)).length;
     return { total: activos.length, atrasados };
   };
@@ -390,6 +547,9 @@ export const Plans = () => {
     const enUso = suscriptos.filter((c) => c.suscripcion!.planId === p.id).length;
     return (
       <div className="flex items-center justify-end gap-2">
+        <Button variant="outline" size="sm" onClick={() => setAsignarPlan(p)} title="Asignar clientes" aria-label={`Asignar clientes a ${p.nombre}`}>
+          <UserPlus className="h-4 w-4" />
+        </Button>
         <Button variant="outline" size="sm" onClick={() => setPrecioPlan(p)} title="Actualizar precio" aria-label={`Actualizar precio de ${p.nombre}`}>
           <TrendingUp className="h-4 w-4" />
         </Button>
@@ -446,7 +606,7 @@ export const Plans = () => {
         <CardContent>
           {planes.length === 0 ? (
             <div className="flex flex-col items-center gap-3 py-10 text-center text-muted-foreground">
-              <Layers className="h-8 w-8 opacity-50" />
+              <SuscripcionIcon className="h-8 w-8 opacity-50" />
               <p>Todavía no hay planes. Sirven para actualizar el precio de varios clientes a la vez.</p>
               <Button variant="outline" size="sm" onClick={() => setPlanDialog({ open: true, plan: null })}>
                 Crear el primero
@@ -701,6 +861,7 @@ export const Plans = () => {
 
       <PlanDialog plan={planDialog.plan} open={planDialog.open} onOpenChange={(open) => setPlanDialog((p) => ({ ...p, open }))} />
       <PrecioDialog plan={precioPlan} onOpenChange={(open) => !open && setPrecioPlan(null)} />
+      <AsignarDialog plan={asignarPlan} onOpenChange={(open) => !open && setAsignarPlan(null)} />
       <ClientDetailSheet client={detalle} onOpenChange={(open) => !open && setDetalle(null)} />
     </div>
   );

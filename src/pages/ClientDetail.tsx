@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { CONDICIONES_IVA } from '@/lib/faktia';
+import { PerfilBadge } from '@/components/PerfilBadge';
 import { CopyableText } from '@/components/CopyButton';
 import { useDataStore } from '@/stores/dataStore';
 import { useShowPreviewModules } from '@/stores/previewStore';
@@ -123,20 +124,6 @@ const ClientDetail = () => {
     }
   };
 
-  const getTipoInversorColor = (tipo: string) => {
-    // El formulario guarda el perfil en minúsculas; comparar sin distinguir mayúsculas
-    switch (tipo?.toLowerCase()) {
-      case 'conservador':
-        return 'bg-primary/10 text-primary';
-      case 'moderado':
-        return 'bg-gold/10 text-gold';
-      case 'agresivo':
-        return 'bg-destructive/10 text-destructive';
-      default:
-        return 'bg-muted text-muted-foreground';
-    }
-  };
-
   return (
     <div className="flex-1 p-6 space-y-6 pt-16 lg:pt-6">
       {/* Header */}
@@ -173,7 +160,7 @@ const ClientDetail = () => {
         <Card className="lg:sticky lg:top-6">
           <CardContent className="divide-y divide-border p-0">
             <InfoRow icon={TrendingUp} label="Perfil">
-              <Badge className={getTipoInversorColor(user.tipoInversor || '')}>{user.tipoInversor}</Badge>
+              <PerfilBadge perfil={user.tipoInversor} />
             </InfoRow>
 
             <InfoRow icon={Building} label={user.brokers.length > 1 ? 'Brokers' : 'Broker'}>

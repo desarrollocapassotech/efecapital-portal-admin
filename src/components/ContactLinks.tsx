@@ -1,4 +1,5 @@
 import { Mail } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 /**
  * Teléfono → número para wa.me (formato internacional sin "+").
@@ -33,6 +34,47 @@ export const EmailLink = ({ email, className = '' }: { email: string; className?
       </a>
     </span>
   ) : null;
+
+/**
+ * Botones de contacto con el mismo estilo que los botones de acciones de los listados
+ * (outline, sm, solo ícono). Si falta el dato, el botón queda deshabilitado para que las filas sigan alineadas.
+ */
+export const ContactButtons = ({ email, telefono, nombre }: { email: string; telefono: string; nombre?: string }) => {
+  const numero = telefono ? numeroWhatsApp(telefono) : '';
+  const quien = nombre ? ` a ${nombre}` : '';
+  return (
+    <div className="flex items-center space-x-2">
+      {email ? (
+        <Button variant="outline" size="sm" asChild>
+          <a href={`mailto:${email}`} title={`Enviar email (${email})`} aria-label={`Enviar email${quien}`}>
+            <Mail className="h-4 w-4" />
+          </a>
+        </Button>
+      ) : (
+        <Button variant="outline" size="sm" disabled title="Sin email" aria-label="Sin email">
+          <Mail className="h-4 w-4" />
+        </Button>
+      )}
+      {numero ? (
+        <Button variant="outline" size="sm" asChild>
+          <a
+            href={`https://wa.me/${numero}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title={`Abrir chat de WhatsApp (${telefono})`}
+            aria-label={`Abrir WhatsApp${quien}`}
+          >
+            <WhatsAppIcon className="h-4 w-4" />
+          </a>
+        </Button>
+      ) : (
+        <Button variant="outline" size="sm" disabled title="Sin teléfono" aria-label="Sin teléfono">
+          <WhatsAppIcon className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
+  );
+};
 
 /** Teléfono + botón que abre un chat de WhatsApp en una pestaña nueva. */
 export const WhatsAppLink = ({ telefono, className = '' }: { telefono: string; className?: string }) => {
